@@ -2,14 +2,10 @@
   <div class="chat-container">
     <h2>🤖 Gemini Chat</h2>
 
-    <textarea
-      v-model="message"
-      placeholder="Type your question..."
-      rows="3"
-    ></textarea>
+    <textarea v-model="message" placeholder="Type your question..." rows="3"></textarea>
 
     <button @click="sendMessage" :disabled="isLoading">
-      {{ isLoading ? "Generating..." : "Send" }}
+      {{ isLoading ? 'Generating...' : 'Send' }}
     </button>
 
     <div class="response">
@@ -19,42 +15,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from 'vue'
 
-const message = ref("");
-const response = ref("");
-const isLoading = ref(false);
+const message = ref('')
+const response = ref('')
+const isLoading = ref(false)
 
+// .vue
 async function sendMessage() {
-  if (!message.value.trim()) return;
-  response.value = "";
-  isLoading.value = true;
+  if (!message.value.trim()) return
+  response.value = ''
+  isLoading.value = true
 
-  const res = await fetch("http://localhost:5000/api/v1/chat/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const res = await fetch('http://localhost:5000/api/v1/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message: message.value }),
-  });
+  })
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
-
-    // For SSE: extract message after "data:"
-    chunk.split("\n\n").forEach(line => {
-      if (line.startsWith("data:")) {
-        response.value += line.replace(/^data:\s*/, "");
-      }
-    });
+  // Ensure the response body is available and the request was successful
+  if (!res.body || !res.ok) {
+    isLoading.value = false
+    // Handle error, e.g., throw or set an error message
+    console.error('Failed to get a streaming response:', res.statusText)
+    return
   }
 
-  isLoading.value = false;
-}
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
 
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break // Decode the Uint8Array value to a string
+
+    const chunk = decoder.decode(value, { stream: true }) // Append the decoded text chunk immediately
+
+    response.value += chunk
+
+    await nextTick(); 
+
+    console.log('Current Response:', response.value)
+  }
+
+  // Final decoding step in case of partial characters at the end
+  const finalChunk = decoder.decode()
+  response.value += finalChunk
+
+  console.log('Final')
+  console.log(response.value)
+
+  isLoading.value = false
+}
 </script>
 
 <style scoped>

@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from google import genai
 from app.config import settings
+import asyncio
 
 
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -27,9 +28,13 @@ async def chat_stream(payload: ChatPayload):
         )
 
         for chunk in response:
-            if chunk["text"]:
-                text = chunk["text"]
-                print(text, flush=True)
-                yield text.encode("utf-8")  # ✅ yield bytes, not str
+            if chunk.text:
+                text = chunk.text
+
+                # Yield control back to the event loop
+                # This ensures Starlette/Uvicorn sends the chunk immediately.
+                await asyncio.sleep(0)
+
+                yield text.encode("utf-8")
 
     return StreamingResponse(stream_messages(), media_type="text/plain")
