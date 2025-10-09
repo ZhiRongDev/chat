@@ -10,4 +10,5 @@ class User(SQLModel, table=True):
     )
     username: str
     password: str
+    is_superuser: bool
     created_at: int = Field(default_factory=get_timestamp)

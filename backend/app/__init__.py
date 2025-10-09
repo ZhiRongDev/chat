@@ -26,14 +26,18 @@ async def lifespan(app: FastAPI):
 
 def create_app():
     app = FastAPI(lifespan=lifespan, debug=True)
-    app.include_router(router, prefix=settings.API_STR)
 
+    # Add CORS **before** routers
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://localhost:5173"],  # or ["*"] for testing
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Content-Type"],  # optional, for streaming
     )
+
+    # Now include routers
+    app.include_router(router, prefix=settings.API_STR)
 
     return app
