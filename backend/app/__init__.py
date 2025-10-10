@@ -38,6 +38,6 @@ def create_app():
     )
 
     # Now include routers
-    app.include_router(router, prefix=settings.API_STR)
+    app.include_router(router)
 
     return app

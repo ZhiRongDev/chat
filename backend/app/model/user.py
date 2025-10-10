@@ -9,6 +9,6 @@ class User(SQLModel, table=True):
         default_factory=snowflake_generator,
     )
     username: str
-    password: str
+    password: bytes 
     is_superuser: bool
     created_at: int = Field(default_factory=get_timestamp)
