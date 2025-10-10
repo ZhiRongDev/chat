@@ -52,7 +52,7 @@ async function sendMessage() {
 
     response.value += chunk
 
-    await nextTick(); 
+    await nextTick()
 
     console.log('Current Response:', response.value)
   }

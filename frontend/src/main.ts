@@ -4,6 +4,7 @@ import i18n from '@/utils/i18n'
 import { setLocale } from './utils/locale'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
+import './assets/styles/scss/main.scss'
 
 import App from './App.vue'
 import router from './router'
