@@ -17,26 +17,28 @@
 import { ref } from 'vue'
 import api from '@/api/service'
 import { appendAlert } from '@/utils/alert'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
 
 const username = ref('')
 const password = ref('')
 
 const register = () => {
-  console.log('register', username.value, password.value)
-  appendAlert('Register clicked', 'success')
-
-
-  // api
-  //   .post('/user', {
-  //     username: username.value,
-  //     password: password.value
-  //   })
-  //   .then((response) => {
-  //     console.log(response)
-  //   })
-  //   .catch((error) => {
-  //     console.log(error)
-  //   })
+  api
+    .post('/user', {
+      username: username.value,
+      password: password.value
+    })
+    .then((response) => {
+      appendAlert('Register success', 'success')
+      router.push('/login')
+    })
+    .catch((error) => {
+      console.error(error)
+      appendAlert(error.response.data.detail, 'danger')
+    })
 }
 </script>
 

@@ -29,9 +29,16 @@ const router = createRouter({
       ],
     },
     {
-      path: '/chat',
-      name: 'Chat',
-      component: () => import('../views/Chat.vue'),
+      path: '/dashboard',
+      name: 'Dashboard',
+      component: () => import('../views/dashboard/Dashboard.vue'),
+      children: [
+        {
+          path: 'chat',
+          name: 'Chat',
+          component: () => import('../views/dashboard/Chat.vue'),
+        },
+      ],
     },
   ],
 })
