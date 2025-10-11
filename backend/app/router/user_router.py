@@ -4,14 +4,15 @@ from app.model import User
 from app.service.user_service import UserService
 from app.auth import get_current_user
 
-auth_router = APIRouter(prefix="/user", tags=["user"], dependencies=[Depends(get_current_user)])
+auth_router = APIRouter(
+    prefix="/user", tags=["user"], dependencies=[Depends(get_current_user)]
+)
 nonauth_router = APIRouter(prefix="/user", tags=["user"])
 
 
 class UserPayload(BaseModel):
     username: str
     password: str
-    is_superuser: bool = False
 
 
 class UserResponse(BaseModel):
@@ -33,11 +34,11 @@ async def create_user(payload: UserPayload):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="User Already exist"
         )
-    
+
     user_to_create = User(
         username=payload.username,
         password=user_service.hash_the_password(payload.password),
-        is_superuser=payload.is_superuser,
+        is_superuser=False,
     )
 
     user_created = user_service.create_user(user_to_create)

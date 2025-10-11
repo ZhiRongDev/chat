@@ -1,3 +1,20 @@
 * {
   box-sizing: border-box;
 }
+
+.liveAlert {
+  position: fixed;
+  right: 40px;
+  bottom: 0;
+  z-index: 10000;
+  .btn-close {
+    padding: 1rem;
+  }
+}
+
+.alert_msg {
+  word-wrap: break-word; // text-wrap: wrap; not working.
+  white-space: normal;
+  max-width: 500px;
+  margin-bottom: 0;
+}
