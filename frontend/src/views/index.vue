@@ -10,6 +10,32 @@
       <div class="sidebar-content">
         Chat history would appear here
       </div>
+      <div class="sidebar-footer">
+        <button class="sidebar-btn" @click="showModal('login')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+          </svg>
+          <span>Login</span>
+        </button>
+        <button class="sidebar-btn" @click="showModal('register')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+          </svg>
+          <span>Register</span>
+        </button>
+        <button class="sidebar-btn" @click="showModal('settings')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+            </path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z">
+            </path>
+          </svg>
+          <span>Settings</span>
+        </button>
+      </div>
     </div>
 
     <!-- Main Chat Area -->
@@ -60,6 +86,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal -->
+    <div v-if="modalOpen" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>{{ modalTitle }}</h2>
+          <button class="close-btn" @click="closeModal">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="modal-content">
+          <p>{{ modalContent }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn-cancel" @click="closeModal">Cancel</button>
+          <button class="modal-btn-confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -73,6 +120,10 @@ const currentMessage = ref('')
 const loading = ref(false)
 const sidebarOpen = ref(true)
 const endOfMessages = ref(null)
+const modalOpen = ref(false)
+const modalType = ref('')
+const modalTitle = ref('')
+const modalContent = ref('')
 let msgId = 2
 
 const scrollToBottom = async () => {
@@ -116,6 +167,26 @@ const newChat = () => {
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
+}
+
+const showModal = (type) => {
+  modalType.value = type
+  modalOpen.value = true
+
+  if (type === 'login') {
+    modalTitle.value = 'Login'
+    modalContent.value = 'Enter your credentials to login'
+  } else if (type === 'register') {
+    modalTitle.value = 'Register'
+    modalContent.value = 'Create a new account'
+  } else if (type === 'settings') {
+    modalTitle.value = 'Settings'
+    modalContent.value = 'Manage your preferences'
+  }
+}
+
+const closeModal = () => {
+  modalOpen.value = false
 }
 </script>
 
@@ -181,6 +252,40 @@ const toggleSidebar = () => {
   padding: 16px;
   font-size: 13px;
   color: #888;
+}
+
+.sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid #333;
+}
+
+.sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background-color: transparent;
+  color: #ccc;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.sidebar-btn:hover {
+  background-color: #2a2a2a;
+  color: white;
+}
+
+.sidebar-btn svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 .main-container {
@@ -386,5 +491,108 @@ const toggleSidebar = () => {
   height: 20px;
   stroke: white;
   stroke-width: 2;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  width: 90%;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f3f4f6;
+  border-radius: 4px;
+}
+
+.close-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: #000;
+}
+
+.modal-content {
+  padding: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  justify-content: flex-end;
+}
+
+.modal-btn-cancel {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #666;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.modal-btn-cancel:hover {
+  background-color: #f9fafb;
+  border-color: #999;
+}
+
+.modal-btn-confirm {
+  padding: 8px 16px;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.modal-btn-confirm:hover {
+  background-color: #1d4ed8;
 }
 </style>
