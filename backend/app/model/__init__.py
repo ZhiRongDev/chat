@@ -1,7 +1,7 @@
 import psycopg2
 from sqlmodel import SQLModel, create_engine
 from app.config import settings
-from app.model.user import User
+from app.model.user_model import User
 
 DEFAULT_DB = "postgres"  # always exists by default
 

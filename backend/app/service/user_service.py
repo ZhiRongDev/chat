@@ -1,4 +1,4 @@
-from app.model.user import User
+from app.model.user_model import User
 from app.model import engine
 from sqlmodel import Session, select
 import bcrypt

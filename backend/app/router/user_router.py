@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from app.model import User
 from app.service.user_service import UserService
 from app.auth import get_current_user
+from app.error import ErrorCode
 
 auth_router = APIRouter(
     prefix="/user", tags=["user"], dependencies=[Depends(get_current_user)]
@@ -26,13 +27,14 @@ async def user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+# TODO: Add SSO Check
 @nonauth_router.post("/", response_model=UserResponse)
 async def create_user(payload: UserPayload):
     user_service = UserService()
 
     if user_service.get_user_by_username(payload.username):
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="User Already exist"
+            status_code=status.HTTP_409_CONFLICT, detail=ErrorCode.USER_ALREADY_EXIST
         )
 
     user_to_create = User(

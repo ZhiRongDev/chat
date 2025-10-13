@@ -5,40 +5,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/login',
+      name: 'Home',
+      component: () => import('../views/index.vue'),
     },
     {
-      path: '/',
-      component: () => import('../views/auth/Auth.vue'),
-      children: [
-        {
-          path: 'login',
-          name: 'Login',
-          component: () => import('../views/auth/Login.vue'),
-        },
-        {
-          path: 'register',
-          name: 'Register',
-          component: () => import('../views/auth/Register.vue'),
-        },
-        {
-          path: 'forget-password',
-          name: 'ForgetPassword',
-          component: () => import('../views/auth/ForgetPassword.vue'),
-        },
-      ],
-    },
-    {
-      path: '/dashboard',
-      name: 'Dashboard',
-      component: () => import('../views/dashboard/Dashboard.vue'),
-      children: [
-        {
-          path: 'chat',
-          name: 'Chat',
-          component: () => import('../views/dashboard/Chat.vue'),
-        },
-      ],
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('../views/NotFound.vue'),
     },
   ],
 })
