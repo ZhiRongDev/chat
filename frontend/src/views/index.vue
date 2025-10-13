@@ -1,280 +1,390 @@
 <template>
-  <div class="chat-layout">
-    <aside class="sidebar">
-      <Sidebar />
-    </aside>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar" :class="{ hidden: !sidebarOpen }">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" @click="newChat">
+          <span>+ New chat</span>
+        </button>
+      </div>
+      <div class="sidebar-content">
+        Chat history would appear here
+      </div>
+    </div>
 
-    <main class="chat-main">
-      <header class="chat-header">
-        <div class="chat-title">ChatGPT</div>
-        <div class="chat-actions">
-          <button class="btn secondary">New chat</button>
-        </div>
-      </header>
+    <!-- Main Chat Area -->
+    <div class="main-container">
+      <!-- Header -->
+      <div class="header">
+        <button class="menu-btn" @click="toggleSidebar">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div class="header-title">ChatGPT</div>
+        <div class="spacer"></div>
+      </div>
 
-      <section class="chat-body" ref="chatBody">
-        <div v-if="messages.length === 0" class="empty-state">
-          <div class="headline">Where should we begin?</div>
-          <div class="starter-bar">
-            <button class="starter" @click="useStarter('Explain this code:')">Explain this code</button>
-            <button class="starter" @click="useStarter('Write a unit test for:')">Write a unit test</button>
-            <button class="starter" @click="useStarter('How do I fix:')">How do I fix</button>
+      <!-- Messages -->
+      <div class="messages-container">
+        <div class="messages-wrapper">
+          <div v-for="msg in messages" :key="msg.id" class="message-group" :class="msg.sender">
+            <div class="message-bubble">
+              {{ msg.text }}
+            </div>
           </div>
-        </div>
 
-        <div v-else class="messages">
-          <div
-            v-for="(m, idx) in messages"
-            :key="idx"
-            class="message"
-            :class="m.role"
-          >
-            <div class="avatar">{{ m.role === 'user' ? 'You' : 'AI' }}</div>
-            <div class="bubble">{{ m.content }}</div>
+          <div v-if="loading" class="message-group bot">
+            <div class="typing-indicator">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>
           </div>
-        </div>
-      </section>
 
-      <footer class="composer">
-        <div class="composer-inner">
-          <textarea
-            ref="inputRef"
-            v-model="input"
-            placeholder="Ask anything"
-            @keydown.enter.exact.prevent="onSubmit"
-            @input="autoResize"
-            rows="1"
-          />
-          <button class="btn primary" :disabled="sending || !input.trim()" @click="onSubmit">Send</button>
+          <div ref="endOfMessages"></div>
         </div>
-        <div class="composer-hint">Press Enter to send</div>
-      </footer>
-    </main>
+      </div>
+
+      <!-- Input -->
+      <div class="input-area">
+        <div class="input-wrapper">
+          <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
+            placeholder="Message ChatGPT..." :disabled="loading" />
+          <button @click="sendMessage" class="send-btn" :disabled="!currentMessage.trim() || loading">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<style lang="scss" scoped>
-.chat-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
+<script setup>
+import { ref, nextTick } from 'vue'
+
+const messages = ref([
+  { id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }
+])
+const currentMessage = ref('')
+const loading = ref(false)
+const sidebarOpen = ref(true)
+const endOfMessages = ref(null)
+let msgId = 2
+
+const scrollToBottom = async () => {
+  await nextTick()
+  if (endOfMessages.value) {
+    endOfMessages.value.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
+const sendMessage = async () => {
+  if (!currentMessage.value.trim() || loading.value) return
+
+  messages.value.push({
+    id: msgId++,
+    text: currentMessage.value,
+    sender: 'user'
+  })
+
+  currentMessage.value = ''
+  loading.value = true
+  await scrollToBottom()
+
+  setTimeout(async () => {
+    messages.value.push({
+      id: msgId++,
+      text: 'This is a simulated response. In a real app, this would connect to an API.',
+      sender: 'bot'
+    })
+    loading.value = false
+    await scrollToBottom()
+  }, 800)
+}
+
+const newChat = () => {
+  messages.value = [
+    { id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }
+  ]
+  currentMessage.value = ''
+  msgId = 2
+}
+
+const toggleSidebar = () => {
+  sidebarOpen.value = !sidebarOpen.value
+}
+</script>
+
+<style scoped>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-container {
+  display: flex;
+  width: 100%;
   height: 100vh;
-  background: #0f172a;
-  color: #e5e7eb;
+  background: #fff;
 }
 
 .sidebar {
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
-  background: #0b1220;
+  width: 260px;
+  background-color: #1a1a1a;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  border-right: 1px solid #333;
   overflow: hidden;
 }
 
-.chat-main {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  height: 100%;
+.sidebar.hidden {
+  width: 0;
+  border-right: none;
 }
 
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #333;
 }
 
-.chat-title {
-  font-weight: 600;
-}
-
-.chat-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.btn {
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: #111827;
-  color: #e5e7eb;
-}
-
-.btn.primary {
-  background: #2563eb;
-  border-color: transparent;
-}
-
-.btn.primary:disabled {
-  opacity: 0.5;
-}
-
-.btn.secondary {
-  background: #1f2937;
-}
-
-.chat-body {
-  overflow-y: auto;
-  padding: 24px 0 8px 0;
-}
-
-.empty-state {
-  display: grid;
-  place-items: center;
-  height: 100%;
-}
-
-.headline {
-  font-size: 28px;
-  font-weight: 600;
-  color: #cbd5e1;
-  margin-bottom: 24px;
-}
-
-.starter-bar {
-  display: flex;
-  gap: 12px;
-}
-
-.starter {
-  background: #111827;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-  border-radius: 999px;
-  padding: 8px 14px;
-}
-
-.messages {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 0 20px 20px 20px;
-}
-
-.message {
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 12px;
-}
-
-.message .avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #1f2937;
+.new-chat-btn {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: #9ca3af;
-  margin-top: 2px;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 6px;
+  background-color: #2a2a2a;
+  color: white;
+  border: 1px solid #444;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
 }
 
-.message .bubble {
-  background: #0b1220;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 12px 14px;
-  white-space: pre-wrap;
+.new-chat-btn:hover {
+  background-color: #333;
+  border-color: #555;
 }
 
-.message.user .bubble {
-  background: #111827;
-}
-
-.composer {
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 12px 20px 18px 20px;
-}
-
-.composer-inner {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  max-width: 900px;
-  margin: 0 auto;
-  background: #0b1220;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 10px 10px 10px 14px;
-}
-
-.composer textarea {
+.sidebar-content {
   flex: 1;
-  resize: none;
-  outline: none;
+  overflow-y: auto;
+  padding: 16px;
+  font-size: 13px;
+  color: #888;
+}
+
+.main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.menu-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: none;
   border: none;
-  color: #e5e7eb;
-  background: transparent;
-  max-height: 200px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.composer-hint {
-  text-align: center;
-  color: #6b7280;
-  font-size: 12px;
-  margin-top: 8px;
+.menu-btn:hover {
+  background-color: #f3f4f6;
 }
 
-@media (max-width: 920px) {
-  .chat-layout { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+.menu-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: #000;
+}
+
+.header-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+}
+
+.spacer {
+  width: 40px;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px;
+  display: flex;
+  justify-content: center;
+  background: #fff;
+}
+
+.messages-wrapper {
+  max-width: 700px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-group {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.message-group.user {
+  justify-content: flex-end;
+}
+
+.message-bubble {
+  max-width: 500px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 15px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.message-group.bot .message-bubble {
+  background-color: #f0f0f0;
+  color: #000;
+}
+
+.message-group.user .message-bubble {
+  background-color: #2563eb;
+  color: white;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 12px 16px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  width: fit-content;
+}
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #999;
+  animation: bounce 1.4s infinite;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(-8px);
+  }
+}
+
+.input-area {
+  padding: 16px 24px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+}
+
+.input-wrapper {
+  max-width: 700px;
+  width: 100%;
+  display: flex;
+  gap: 12px;
+}
+
+.input-field {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: all 0.2s;
+  resize: none;
+  max-height: 100px;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.send-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.send-btn:hover:not(:disabled) {
+  background-color: #1d4ed8;
+}
+
+.send-btn:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.send-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: white;
+  stroke-width: 2;
 }
 </style>
-
-<script setup lang="ts">
-import { nextTick, onMounted, ref } from 'vue'
-import Sidebar from '@/components/Sidebar.vue'
-
-type Msg = { role: 'user' | 'assistant'; content: string }
-
-const messages = ref<Msg[]>([])
-const input = ref('')
-const sending = ref(false)
-const chatBody = ref<HTMLElement | null>(null)
-const inputRef = ref<HTMLTextAreaElement | null>(null)
-
-function scrollToBottom() {
-  if (!chatBody.value) return
-  chatBody.value.scrollTo({ top: chatBody.value.scrollHeight, behavior: 'smooth' })
-}
-
-function autoResize() {
-  const el = inputRef.value
-  if (!el) return
-  el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight, 200) + 'px'
-}
-
-async function onSubmit() {
-  if (sending.value) return
-  const text = input.value.trim()
-  if (!text) return
-  messages.value.push({ role: 'user', content: text })
-  input.value = ''
-  await nextTick()
-  autoResize()
-  scrollToBottom()
-  sending.value = true
-  setTimeout(async () => {
-    messages.value.push({ role: 'assistant', content: 'This is a placeholder response.' })
-    await nextTick()
-    scrollToBottom()
-    sending.value = false
-  }, 400)
-}
-
-function useStarter(prefix: string) {
-  input.value = prefix + ' '
-  nextTick(() => {
-    inputRef.value?.focus()
-    autoResize()
-  })
-}
-
-onMounted(() => {
-  autoResize()
-})
-</script>
