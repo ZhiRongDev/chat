@@ -100,8 +100,8 @@ class ChatStorage {
       console.log('Getting all chats from IndexedDB...')
       const transaction = db.transaction([STORE_NAME], 'readonly')
       const objectStore = transaction.objectStore(STORE_NAME)
-      const index = objectStore.index('updatedAt')
-      const request = index.openCursor(null, 'prev') // Sort by updatedAt descending
+      const index = objectStore.index('createdAt')
+      const request = index.openCursor(null, 'prev') // Sort by createdAt descending (newest first)
 
       const chats: ChatHistory[] = []
 

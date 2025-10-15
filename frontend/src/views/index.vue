@@ -292,6 +292,19 @@ onMounted(async () => {
   try {
     await chatStorage.init()
     await loadChatHistories()
+
+    // Load the most recent chat if available
+    if (chatHistories.value.length > 0) {
+      const mostRecentChat = chatHistories.value[0]
+      if (mostRecentChat) {
+        messages.value = mostRecentChat.messages
+        currentChatId.value = mostRecentChat.id
+        // Set msgId to the highest id + 1, with safety check for empty messages
+        msgId = mostRecentChat.messages.length > 0 ? Math.max(...mostRecentChat.messages.map((m) => m.id)) + 1 : 2
+        await nextTick()
+        await scrollToBottom()
+      }
+    }
   } catch (error) {
     console.error('Failed to initialize chat storage:', error)
   }
@@ -458,8 +471,10 @@ const loadChat = async (chatId: string) => {
     if (chat) {
       messages.value = chat.messages
       currentChatId.value = chat.id
-      // Set msgId to the highest id + 1
-      msgId = Math.max(...chat.messages.map((m) => m.id)) + 1
+      // Set msgId to the highest id + 1, with safety check for empty messages
+      msgId = chat.messages.length > 0 ? Math.max(...chat.messages.map((m) => m.id)) + 1 : 2
+      // Wait for next tick to ensure DOM is updated, then scroll
+      await nextTick()
       await scrollToBottom()
     }
   } catch (error) {
@@ -469,22 +484,28 @@ const loadChat = async (chatId: string) => {
 
 const deleteChat = async (chatId: string) => {
   try {
+    // If we're deleting the current chat, clear it first before deleting
+    if (currentChatId.value === chatId) {
+      // Reset current chat state without saving
+      messages.value = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }]
+      currentMessage.value = ''
+      currentChatId.value = null
+      msgId = 2
+    }
+
+    // Delete from IndexedDB
     await chatStorage.deleteChat(chatId)
     await loadChatHistories()
-
-    // If we deleted the current chat, start a new one
-    if (currentChatId.value === chatId) {
-      newChat()
-    }
   } catch (error) {
     console.error('Failed to delete chat:', error)
   }
 }
 
 const newChat = async () => {
-  // Save current chat before starting a new one
+  // Save current chat before starting a new one (only if it has content)
   await saveCurrentChat()
 
+  // Reset to initial state
   messages.value = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }]
   currentMessage.value = ''
   currentChatId.value = null
