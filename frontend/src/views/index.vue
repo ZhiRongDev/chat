@@ -7,7 +7,30 @@
           <span>+ New chat</span>
         </button>
       </div>
-      <div class="sidebar-content">Chat history would appear here</div>
+      <div class="sidebar-content">
+        <div v-if="chatHistories.length === 0" class="no-history">No chat history yet</div>
+        <div v-else class="chat-history-list">
+          <div
+            v-for="chat in chatHistories"
+            :key="chat.id"
+            class="chat-history-item"
+            :class="{ active: currentChatId === chat.id }"
+            @click="loadChat(chat.id)"
+          >
+            <div class="chat-history-title">{{ chat.title }}</div>
+            <button class="delete-chat-btn" @click.stop="deleteChat(chat.id)" title="Delete chat">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="sidebar-footer">
         <button class="sidebar-btn" @click="showModal('login')">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,18 +258,21 @@
   </div>
 </template>
 
-<script setup>
-import { ref, nextTick } from 'vue'
+<script setup lang="ts">
+import { ref, nextTick, onMounted } from 'vue'
+import { chatStorage, type ChatHistory, type Message } from '@/utils/chatStorage'
 
-const messages = ref([{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }])
+const messages = ref<Message[]>([{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }])
 const currentMessage = ref('')
 const loading = ref(false)
 const sidebarOpen = ref(true)
-const endOfMessages = ref(null)
+const endOfMessages = ref<HTMLElement | null>(null)
 const modalOpen = ref(false)
 const modalType = ref('')
 const modalTitle = ref('')
 const modalContent = ref('')
+const chatHistories = ref<ChatHistory[]>([])
+const currentChatId = ref<string | null>(null)
 let msgId = 2
 
 const loginForm = ref({
@@ -259,6 +285,16 @@ const registerForm = ref({
   email: '',
   password: '',
   confirmPassword: '',
+})
+
+// Initialize IndexedDB and load chat histories
+onMounted(async () => {
+  try {
+    await chatStorage.init()
+    await loadChatHistories()
+  } catch (error) {
+    console.error('Failed to initialize chat storage:', error)
+  }
 })
 
 const scrollToBottom = async () => {
@@ -308,6 +344,8 @@ const sendMessage = async () => {
         botMessage.text = 'Sorry, there was an error processing your request.'
       }
       await scrollToBottom()
+      // Save chat even on error
+      await saveCurrentChat()
       return
     }
 
@@ -339,6 +377,9 @@ const sendMessage = async () => {
 
     loading.value = false
     await scrollToBottom()
+
+    // Save chat after successful message exchange
+    await saveCurrentChat()
   } catch (error) {
     console.error('Error sending message:', error)
     loading.value = false
@@ -348,12 +389,105 @@ const sendMessage = async () => {
       botMessage.text = 'Sorry, there was an error connecting to the server.'
     }
     await scrollToBottom()
+
+    // Save chat even on error
+    await saveCurrentChat()
   }
 }
 
-const newChat = () => {
+const loadChatHistories = async () => {
+  try {
+    chatHistories.value = await chatStorage.getAllChats()
+  } catch (error) {
+    console.error('Failed to load chat histories:', error)
+  }
+}
+
+const saveCurrentChat = async () => {
+  try {
+    console.log('saveCurrentChat called, messages count:', messages.value.length)
+    // Only save if there are messages beyond the initial greeting
+    if (messages.value.length <= 1) {
+      console.log('Skipping save - not enough messages')
+      return
+    }
+
+    // Generate or reuse chat ID
+    if (!currentChatId.value) {
+      currentChatId.value = chatStorage.generateChatId()
+      console.log('Generated new chat ID:', currentChatId.value)
+    }
+
+    const chatId = currentChatId.value
+
+    // Convert reactive messages to plain objects for IndexedDB
+    const plainMessages: Message[] = messages.value.map((msg) => ({
+      id: msg.id,
+      text: msg.text,
+      sender: msg.sender,
+    }))
+
+    const title = chatStorage.generateChatTitle(plainMessages)
+    const now = Date.now()
+
+    // Find existing chat to preserve createdAt timestamp
+    const existingChat = chatHistories.value.find((c) => c.id === chatId)
+
+    const chatHistory: ChatHistory = {
+      id: chatId,
+      title,
+      messages: plainMessages,
+      createdAt: existingChat?.createdAt || now,
+      updatedAt: now,
+    }
+
+    console.log('Saving chat history:', chatHistory)
+    await chatStorage.saveChat(chatHistory)
+    await loadChatHistories()
+  } catch (error) {
+    console.error('Failed to save chat:', error)
+  }
+}
+
+const loadChat = async (chatId: string) => {
+  try {
+    // Save current chat before loading a new one
+    await saveCurrentChat()
+
+    const chat = await chatStorage.getChat(chatId)
+    if (chat) {
+      messages.value = chat.messages
+      currentChatId.value = chat.id
+      // Set msgId to the highest id + 1
+      msgId = Math.max(...chat.messages.map((m) => m.id)) + 1
+      await scrollToBottom()
+    }
+  } catch (error) {
+    console.error('Failed to load chat:', error)
+  }
+}
+
+const deleteChat = async (chatId: string) => {
+  try {
+    await chatStorage.deleteChat(chatId)
+    await loadChatHistories()
+
+    // If we deleted the current chat, start a new one
+    if (currentChatId.value === chatId) {
+      newChat()
+    }
+  } catch (error) {
+    console.error('Failed to delete chat:', error)
+  }
+}
+
+const newChat = async () => {
+  // Save current chat before starting a new one
+  await saveCurrentChat()
+
   messages.value = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }]
   currentMessage.value = ''
+  currentChatId.value = null
   msgId = 2
 }
 
@@ -361,7 +495,7 @@ const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
 }
 
-const showModal = (type) => {
+const showModal = (type: string) => {
   modalType.value = type
   modalOpen.value = true
 
@@ -461,9 +595,91 @@ const handleRegister = () => {
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 8px;
   font-size: 13px;
   color: #888;
+}
+
+.no-history {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+.chat-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: transparent;
+  position: relative;
+  gap: 8px;
+}
+
+.chat-history-item:hover {
+  background-color: #2a2a2a;
+}
+
+.chat-history-item.active {
+  background-color: #333;
+}
+
+.chat-history-title {
+  flex: 1;
+  font-size: 13px;
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-history-item:hover .chat-history-title,
+.chat-history-item.active .chat-history-title {
+  color: white;
+}
+
+.delete-chat-btn {
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.chat-history-item:hover .delete-chat-btn {
+  opacity: 1;
+}
+
+.delete-chat-btn:hover {
+  background-color: #ff4444;
+}
+
+.delete-chat-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: #ccc;
+}
+
+.delete-chat-btn:hover svg {
+  stroke: white;
 }
 
 .sidebar-footer {
