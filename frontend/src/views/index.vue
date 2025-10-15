@@ -271,9 +271,11 @@ const scrollToBottom = async () => {
 const sendMessage = async () => {
   if (!currentMessage.value.trim() || loading.value) return
 
+  const userMessageText = currentMessage.value
+
   messages.value.push({
     id: msgId++,
-    text: currentMessage.value,
+    text: userMessageText,
     sender: 'user',
   })
 
@@ -281,15 +283,72 @@ const sendMessage = async () => {
   loading.value = true
   await scrollToBottom()
 
-  setTimeout(async () => {
-    messages.value.push({
-      id: msgId++,
-      text: 'This is a simulated response. In a real app, this would connect to an API.',
-      sender: 'bot',
+  // Create a new bot message that will be updated with streaming response
+  const botMessageId = msgId++
+  messages.value.push({
+    id: botMessageId,
+    text: '',
+    sender: 'bot',
+  })
+
+  try {
+    const res = await fetch('http://localhost:5000/api/v1/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: userMessageText }),
     })
+
+    // Ensure the response body is available and the request was successful
+    if (!res.body || !res.ok) {
+      loading.value = false
+      console.error('Failed to get a streaming response:', res.statusText)
+      // Update bot message with error
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = 'Sorry, there was an error processing your request.'
+      }
+      await scrollToBottom()
+      return
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const chunk = decoder.decode(value, { stream: true })
+
+      // Find and update the bot message
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text += chunk
+      }
+
+      await nextTick()
+      await scrollToBottom()
+    }
+
+    // Final decoding step in case of partial characters at the end
+    const finalChunk = decoder.decode()
+    const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+    if (botMessage && finalChunk) {
+      botMessage.text += finalChunk
+    }
+
     loading.value = false
     await scrollToBottom()
-  }, 800)
+  } catch (error) {
+    console.error('Error sending message:', error)
+    loading.value = false
+    // Update bot message with error
+    const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+    if (botMessage) {
+      botMessage.text = 'Sorry, there was an error connecting to the server.'
+    }
+    await scrollToBottom()
+  }
 }
 
 const newChat = () => {
