@@ -302,7 +302,7 @@ export default function ChatPage() {
       {/* Sidebar */}
       <div
         className={`w-[260px] bg-[#1a1a1a] text-white flex flex-col transition-all duration-300 border-r border-[#333] overflow-hidden ${
-          sidebarOpen ? '' : 'w-0 border-r-0'
+          sidebarOpen ? '' : 'w-[0] border-r-0'
         }`}
       >
         <div className="p-4 border-b border-[#333]">
