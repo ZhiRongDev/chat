@@ -32,28 +32,37 @@
         </div>
       </div>
       <div class="sidebar-footer">
-        <button class="sidebar-btn" @click="showModal('login')">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-            ></path>
-          </svg>
-          <span>Login</span>
-        </button>
-        <button class="sidebar-btn" @click="showModal('register')">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-            ></path>
-          </svg>
-          <span>Register</span>
-        </button>
+        <div v-if="userStore.user.username" class="user-info">
+          <div class="user-avatar">{{ userStore.user.username.charAt(0).toUpperCase() }}</div>
+          <div class="user-details">
+            <div class="user-name">{{ userStore.user.username }}</div>
+            <button class="logout-link" @click="handleLogout">Logout</button>
+          </div>
+        </div>
+        <template v-else>
+          <button class="sidebar-btn" @click="showModal('login')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+              ></path>
+            </svg>
+            <span>Login</span>
+          </button>
+          <button class="sidebar-btn" @click="showModal('register')">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+              ></path>
+            </svg>
+            <span>Register</span>
+          </button>
+        </template>
         <button class="sidebar-btn" @click="showModal('settings')">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
@@ -95,7 +104,12 @@
       <!-- Messages -->
       <div class="messages-container">
         <div class="messages-wrapper">
-          <div v-for="msg in messages" :key="msg.id" class="message-group" :class="msg.sender">
+          <div
+            v-for="(msg, index) in messages"
+            :key="msg.id || index"
+            class="message-group"
+            :class="msg.sender"
+          >
             <div class="message-bubble">
               {{ msg.text }}
             </div>
@@ -162,15 +176,17 @@
         <!-- Login Form -->
         <template v-if="modalType === 'login'">
           <div class="modal-body">
+            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
             <form @submit.prevent="handleLogin">
               <div class="form-group">
-                <label for="login-email">Email</label>
+                <label for="login-username">Username</label>
                 <input
-                  v-model="loginForm.email"
-                  type="email"
-                  id="login-email"
-                  placeholder="Enter your email"
+                  v-model="loginForm.username"
+                  type="text"
+                  id="login-username"
+                  placeholder="Enter your username"
                   required
+                  :disabled="formLoading"
                 />
               </div>
               <div class="form-group">
@@ -181,11 +197,21 @@
                   id="login-password"
                   placeholder="Enter your password"
                   required
+                  :disabled="formLoading"
                 />
               </div>
               <div class="modal-footer">
-                <button type="submit" class="modal-btn-confirm">Login</button>
-                <button type="button" class="modal-btn-cancel" @click="closeModal">Cancel</button>
+                <button type="submit" class="modal-btn-confirm" :disabled="formLoading">
+                  {{ formLoading ? 'Logging in...' : 'Login' }}
+                </button>
+                <button
+                  type="button"
+                  class="modal-btn-cancel"
+                  @click="closeModal"
+                  :disabled="formLoading"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -194,25 +220,17 @@
         <!-- Register Form -->
         <template v-if="modalType === 'register'">
           <div class="modal-body">
+            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
             <form @submit.prevent="handleRegister">
               <div class="form-group">
-                <label for="register-name">Full Name</label>
+                <label for="register-username">Username</label>
                 <input
-                  v-model="registerForm.name"
+                  v-model="registerForm.username"
                   type="text"
-                  id="register-name"
-                  placeholder="Enter your full name"
+                  id="register-username"
+                  placeholder="Enter your username"
                   required
-                />
-              </div>
-              <div class="form-group">
-                <label for="register-email">Email</label>
-                <input
-                  v-model="registerForm.email"
-                  type="email"
-                  id="register-email"
-                  placeholder="Enter your email"
-                  required
+                  :disabled="formLoading"
                 />
               </div>
               <div class="form-group">
@@ -223,6 +241,7 @@
                   id="register-password"
                   placeholder="Enter your password"
                   required
+                  :disabled="formLoading"
                 />
               </div>
               <div class="form-group">
@@ -233,11 +252,21 @@
                   id="register-confirm"
                   placeholder="Confirm your password"
                   required
+                  :disabled="formLoading"
                 />
               </div>
               <div class="modal-footer">
-                <button type="submit" class="modal-btn-confirm">Register</button>
-                <button type="button" class="modal-btn-cancel" @click="closeModal">Cancel</button>
+                <button type="submit" class="modal-btn-confirm" :disabled="formLoading">
+                  {{ formLoading ? 'Registering...' : 'Register' }}
+                </button>
+                <button
+                  type="button"
+                  class="modal-btn-cancel"
+                  @click="closeModal"
+                  :disabled="formLoading"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
           </div>
@@ -259,10 +288,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
-import { chatStorage, type ChatHistory, type Message } from '@/utils/chatStorage'
+import { ref, nextTick, onMounted, computed } from 'vue'
+import { useUserStore } from '@/stores/user'
+import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
 
-const messages = ref<Message[]>([{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }])
+const userStore = useUserStore()
+const isLoggedIn = computed(() => !!userStore.user.username)
+
+const messages = ref<Message[]>([
+  { id: '1', text: 'Hello! How can I help you today?', sender: 'bot' },
+])
 const currentMessage = ref('')
 const loading = ref(false)
 const sidebarOpen = ref(true)
@@ -271,42 +306,37 @@ const modalOpen = ref(false)
 const modalType = ref('')
 const modalTitle = ref('')
 const modalContent = ref('')
-const chatHistories = ref<ChatHistory[]>([])
+const chatHistories = ref<ChatHistoryItem[]>([])
 const currentChatId = ref<string | null>(null)
-let msgId = 2
+const formLoading = ref(false)
+const errorMessage = ref('')
+let msgIdCounter = 2  // Temporary local counter for new messages (will be replaced with backend IDs)
 
 const loginForm = ref({
-  email: '',
+  username: '',
   password: '',
 })
 
 const registerForm = ref({
-  name: '',
-  email: '',
+  username: '',
   password: '',
   confirmPassword: '',
 })
 
-// Initialize IndexedDB and load chat histories
+// Load chat histories on mount (only if logged in)
 onMounted(async () => {
   try {
-    await chatStorage.init()
-    await loadChatHistories()
+    if (isLoggedIn.value) {
+      await loadChatHistories()
 
-    // Load the most recent chat if available
-    if (chatHistories.value.length > 0) {
-      const mostRecentChat = chatHistories.value[0]
-      if (mostRecentChat) {
-        messages.value = mostRecentChat.messages
-        currentChatId.value = mostRecentChat.id
-        // Set msgId to the highest id + 1, with safety check for empty messages
-        msgId = mostRecentChat.messages.length > 0 ? Math.max(...mostRecentChat.messages.map((m) => m.id)) + 1 : 2
-        await nextTick()
-        await scrollToBottom()
+      // Load the most recent chat if available
+      if (chatHistories.value.length > 0 && chatHistories.value[0]) {
+        const mostRecentChatId = chatHistories.value[0].id
+        await loadChat(mostRecentChatId)
       }
     }
   } catch (error) {
-    console.error('Failed to initialize chat storage:', error)
+    console.error('Failed to load chat histories:', error)
   }
 })
 
@@ -323,7 +353,7 @@ const sendMessage = async () => {
   const userMessageText = currentMessage.value
 
   messages.value.push({
-    id: msgId++,
+    id: String(msgIdCounter++),
     text: userMessageText,
     sender: 'user',
   })
@@ -333,7 +363,7 @@ const sendMessage = async () => {
   await scrollToBottom()
 
   // Create a new bot message that will be updated with streaming response
-  const botMessageId = msgId++
+  const botMessageId = String(msgIdCounter++)
   messages.value.push({
     id: botMessageId,
     text: '',
@@ -410,52 +440,54 @@ const sendMessage = async () => {
 
 const loadChatHistories = async () => {
   try {
-    chatHistories.value = await chatStorage.getAllChats()
+    if (!isLoggedIn.value) {
+      chatHistories.value = []
+      return
+    }
+    chatHistories.value = await chatApi.getChatHistories()
   } catch (error) {
     console.error('Failed to load chat histories:', error)
+    chatHistories.value = []
   }
 }
 
 const saveCurrentChat = async () => {
   try {
     console.log('saveCurrentChat called, messages count:', messages.value.length)
+
+    // Only save if logged in
+    if (!isLoggedIn.value) {
+      console.log('Skipping save - user not logged in')
+      return
+    }
+
     // Only save if there are messages beyond the initial greeting
     if (messages.value.length <= 1) {
       console.log('Skipping save - not enough messages')
       return
     }
 
-    // Generate or reuse chat ID
+    // Generate title from first user message
+    const firstUserMessage = messages.value.find((msg) => msg.sender === 'user')
+    const title =
+      firstUserMessage && firstUserMessage.text
+        ? firstUserMessage.text.trim().substring(0, 50) +
+          (firstUserMessage.text.length > 50 ? '...' : '')
+        : 'New Chat'
+
+    const savedChat = await chatApi.saveChatHistory({
+      chat_id: currentChatId.value || undefined,
+      title,
+      messages: messages.value,
+    })
+
+    // Update current chat ID if it was a new chat
     if (!currentChatId.value) {
-      currentChatId.value = chatStorage.generateChatId()
+      currentChatId.value = savedChat.id
       console.log('Generated new chat ID:', currentChatId.value)
     }
 
-    const chatId = currentChatId.value
-
-    // Convert reactive messages to plain objects for IndexedDB
-    const plainMessages: Message[] = messages.value.map((msg) => ({
-      id: msg.id,
-      text: msg.text,
-      sender: msg.sender,
-    }))
-
-    const title = chatStorage.generateChatTitle(plainMessages)
-    const now = Date.now()
-
-    // Find existing chat to preserve createdAt timestamp
-    const existingChat = chatHistories.value.find((c) => c.id === chatId)
-
-    const chatHistory: ChatHistory = {
-      id: chatId,
-      title,
-      messages: plainMessages,
-      createdAt: existingChat?.createdAt || now,
-      updatedAt: now,
-    }
-
-    console.log('Saving chat history:', chatHistory)
-    await chatStorage.saveChat(chatHistory)
+    console.log('Saved chat history:', savedChat)
     await loadChatHistories()
   } catch (error) {
     console.error('Failed to save chat:', error)
@@ -467,12 +499,12 @@ const loadChat = async (chatId: string) => {
     // Save current chat before loading a new one
     await saveCurrentChat()
 
-    const chat = await chatStorage.getChat(chatId)
+    const chat = await chatApi.getChatDetail(chatId)
     if (chat) {
       messages.value = chat.messages
       currentChatId.value = chat.id
-      // Set msgId to the highest id + 1, with safety check for empty messages
-      msgId = chat.messages.length > 0 ? Math.max(...chat.messages.map((m) => m.id)) + 1 : 2
+      // Reset counter for new temporary messages
+      msgIdCounter = 2
       // Wait for next tick to ensure DOM is updated, then scroll
       await nextTick()
       await scrollToBottom()
@@ -487,14 +519,14 @@ const deleteChat = async (chatId: string) => {
     // If we're deleting the current chat, clear it first before deleting
     if (currentChatId.value === chatId) {
       // Reset current chat state without saving
-      messages.value = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }]
+      messages.value = [{ id: '1', text: 'Hello! How can I help you today?', sender: 'bot' }]
       currentMessage.value = ''
       currentChatId.value = null
-      msgId = 2
+      msgIdCounter = 2
     }
 
-    // Delete from IndexedDB
-    await chatStorage.deleteChat(chatId)
+    // Delete from PostgreSQL
+    await chatApi.deleteChatHistory(chatId)
     await loadChatHistories()
   } catch (error) {
     console.error('Failed to delete chat:', error)
@@ -506,14 +538,30 @@ const newChat = async () => {
   await saveCurrentChat()
 
   // Reset to initial state
-  messages.value = [{ id: 1, text: 'Hello! How can I help you today?', sender: 'bot' }]
+  messages.value = [{ id: '1', text: 'Hello! How can I help you today?', sender: 'bot' }]
   currentMessage.value = ''
   currentChatId.value = null
-  msgId = 2
+  msgIdCounter = 2
 }
 
 const toggleSidebar = () => {
   sidebarOpen.value = !sidebarOpen.value
+}
+
+const handleLogout = async () => {
+  // Save current chat before logging out
+  await saveCurrentChat()
+
+  userStore.logout()
+
+  // Clear chat histories and reset to initial state
+  chatHistories.value = []
+  messages.value = [{ id: '1', text: 'Hello! How can I help you today?', sender: 'bot' }]
+  currentMessage.value = ''
+  currentChatId.value = null
+  msgIdCounter = 2
+
+  alert('You have been logged out successfully')
 }
 
 const showModal = (type: string) => {
@@ -534,25 +582,88 @@ const showModal = (type: string) => {
 
 const closeModal = () => {
   modalOpen.value = false
-  loginForm.value = { email: '', password: '' }
-  registerForm.value = { name: '', email: '', password: '', confirmPassword: '' }
+  errorMessage.value = ''
+  formLoading.value = false
+  loginForm.value = { username: '', password: '' }
+  registerForm.value = { username: '', password: '', confirmPassword: '' }
 }
 
-const handleLogin = () => {
-  if (loginForm.value.email && loginForm.value.password) {
-    alert(`Login successful for ${loginForm.value.email}`)
-    closeModal()
-  }
-}
-
-const handleRegister = () => {
-  if (registerForm.value.password !== registerForm.value.confirmPassword) {
-    alert('Passwords do not match!')
+const handleLogin = async () => {
+  if (!loginForm.value.username || !loginForm.value.password) {
+    errorMessage.value = 'Please enter username and password'
     return
   }
-  if (registerForm.value.name && registerForm.value.email && registerForm.value.password) {
-    alert(`Registration successful for ${registerForm.value.name}`)
+
+  try {
+    formLoading.value = true
+    errorMessage.value = ''
+
+    await userStore.login({
+      username: loginForm.value.username,
+      password: loginForm.value.password,
+    })
+
+    // Show success message
+    alert(`Welcome back, ${userStore.user.username}!`)
     closeModal()
+
+    // Load chat histories after login
+    await loadChatHistories()
+  } catch (error: any) {
+    console.error('Login error:', error)
+    if (error.response?.data?.detail) {
+      errorMessage.value = error.response.data.detail
+    } else if (error.response?.status === 401) {
+      errorMessage.value = 'Invalid username or password'
+    } else {
+      errorMessage.value = 'Failed to login. Please try again.'
+    }
+  } finally {
+    formLoading.value = false
+  }
+}
+
+const handleRegister = async () => {
+  if (!registerForm.value.username || !registerForm.value.password) {
+    errorMessage.value = 'Please fill in all fields'
+    return
+  }
+
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    errorMessage.value = 'Passwords do not match!'
+    return
+  }
+
+  if (registerForm.value.password.length < 6) {
+    errorMessage.value = 'Password must be at least 6 characters long'
+    return
+  }
+
+  try {
+    formLoading.value = true
+    errorMessage.value = ''
+
+    await userStore.register({
+      username: registerForm.value.username,
+      password: registerForm.value.password,
+    })
+
+    // Show success and auto-login
+    alert(`Registration successful! Please login with your credentials.`)
+    closeModal()
+    // Switch to login modal
+    showModal('login')
+  } catch (error: any) {
+    console.error('Registration error:', error)
+    if (error.response?.data?.detail) {
+      errorMessage.value = error.response.data.detail
+    } else if (error.response?.status === 409) {
+      errorMessage.value = 'Username already exists'
+    } else {
+      errorMessage.value = 'Failed to register. Please try again.'
+    }
+  } finally {
+    formLoading.value = false
   }
 }
 </script>
@@ -980,7 +1091,9 @@ const handleRegister = () => {
   display: block;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   max-width: 440px;
   width: 100%;
   max-height: 90vh;
@@ -1172,5 +1285,75 @@ const handleRegister = () => {
 
 .modal-footer button:last-child {
   order: 2;
+}
+
+.error-message {
+  padding: 12px 16px;
+  background-color: #fee;
+  border: 1px solid #fcc;
+  border-radius: 6px;
+  color: #c33;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #2a2a2a;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.logout-link {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.logout-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.modal-btn-confirm:disabled,
+.modal-btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

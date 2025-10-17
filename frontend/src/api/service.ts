@@ -4,20 +4,19 @@ import axios, {
   type InternalAxiosRequestConfig,
   type AxiosResponse,
 } from 'axios'
-import { useUserStore } from '@/stores/user' // assume you have token utils
-
-const userStore = useUserStore()
+import { useUserStore } from '@/stores/user'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // your API base URL
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1', // your API base URL
   timeout: 10000, // request timeout in ms
 })
 
 // Request interceptor: add Authorization header
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = userStore.user?.token // get token from storage
+    // Get the token from localStorage directly to avoid initialization issues
+    const token = localStorage.getItem('token')
     if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
@@ -40,8 +39,16 @@ api.interceptors.response.use(
       const status = error.response.status
       switch (status) {
         case 401:
-          // Unauthorized, maybe redirect to login
-          userStore.logout() // remove token and redirect
+          // Unauthorized, clear token and user data
+          localStorage.removeItem('token')
+          localStorage.removeItem('username')
+          // Try to get the user store if available
+          try {
+            const userStore = useUserStore()
+            userStore.logout()
+          } catch (e) {
+            // Store not available yet, just clear localStorage
+          }
           break
         case 403:
           // Forbidden, show a message

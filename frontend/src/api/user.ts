@@ -1,0 +1,52 @@
+// src/api/user.ts
+import api from './service'
+
+export interface LoginPayload {
+  username: string
+  password: string
+}
+
+export interface RegisterPayload {
+  username: string
+  password: string
+}
+
+export interface UserResponse {
+  id: string  // Snowflake ID as string for JavaScript safety
+  username: string
+  created_at: number
+}
+
+export interface LoginResponse {
+  access_token: string
+  token_type: string
+  user: UserResponse
+}
+
+export const userApi = {
+  /**
+   * Login with username and password
+   */
+  login: async (payload: LoginPayload): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>('/user/login', payload)
+    return response.data
+  },
+
+  /**
+   * Register a new user account
+   */
+  register: async (payload: RegisterPayload): Promise<UserResponse> => {
+    console.log(payload);
+    const response = await api.post<UserResponse>('/user/register', payload)
+    console.log(response);
+    return response.data
+  },
+
+  /**
+   * Get current user information
+   */
+  getCurrentUser: async (): Promise<UserResponse> => {
+    const response = await api.get<UserResponse>('/user/')
+    return response.data
+  },
+}

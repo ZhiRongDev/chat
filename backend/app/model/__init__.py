@@ -2,9 +2,11 @@ import psycopg2
 from sqlmodel import SQLModel, create_engine
 from app.config import settings
 from app.model.user_model import User
+from app.model.chat_model import ChatHistory, ChatMessage
 
 DEFAULT_DB = "postgres"  # always exists by default
 
+conn = None
 try:
     # Connect to default database first
     conn = psycopg2.connect(
@@ -27,8 +29,12 @@ try:
             print(f"Database {settings.DB_NAME} created.")
         else:
             print(f"Database {settings.DB_NAME} already exists.")
+except Exception as e:
+    print(f"Error setting up database: {e}")
+    raise
 finally:
-    conn.close()
+    if conn is not None:
+        conn.close()
 
 # Now connect to your actual target database
 DATABASE_URL = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"

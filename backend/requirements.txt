@@ -27,7 +27,7 @@ jmespath==1.0.1
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
-packaging==25.0
+packaging>=23.2,<25
 platformdirs==4.4.0
 psycopg2==2.9.10
 pycparser==2.23
@@ -70,3 +70,19 @@ uvicorn==0.37.0
 uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1
+
+# LangChain and LangGraph
+langchain==0.3.13
+langchain-core>=0.3.29,<0.4.0
+langchain-community==0.3.13
+langchain-google-genai==2.0.8
+langchain-openai==0.3.0
+langchain-anthropic==0.3.0
+langgraph==0.2.62
+
+# Search APIs
+google-search-results==2.4.2
+tavily-python==0.5.0
+
+# Google Generative AI (already present, but keeping for reference)
+google-generativeai==0.8.4

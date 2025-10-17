@@ -1,0 +1,53 @@
+# Development overrides for docker-compose
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  frontend:
+    build:
+      target: development
+    ports:
+      - "5173:5173"
+    volumes:
+      # Mount source code for hot-reload
+      - ./frontend:/app/frontend
+      # Prevent node_modules from being overwritten
+      - /app/frontend/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=http://localhost:5000
+
+  backend:
+    build:
+      target: development
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount source code for hot-reload
+      - ./backend:/app/backend
+      # Prevent Python cache issues
+      - /app/backend/.venv
+      - /app/backend/__pycache__
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+    command: python main.py
+
+  db:
+    ports:
+      - "5432:5432"
+    # Use a development-specific volume to avoid data conflicts
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-chat_dev}
+
+  redis:
+    ports:
+      - "6379:6379"
+    # Use a development-specific volume
+    volumes:
+      - redis_data_dev:/data
+
+volumes:
+  pg_data_dev:
+  redis_data_dev:

@@ -21,7 +21,18 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PORT: int
     REDIS_DB: int
+
+    # LLM API Keys
     GEMINI_API_KEY: str
+    OPENAI_API_KEY: str | None = None
+    ANTHROPIC_API_KEY: str | None = None
+
+    # Search API Keys
+    SERPER_API_KEY: str | None = None  # Google Search via Serper
+    TAVILY_API_KEY: str | None = None  # Tavily Search
+
+    # Default LLM Provider
+    DEFAULT_LLM_PROVIDER: str = "gemini"  # Options: gemini, openai, anthropic
 
     SECRET_KEY: str
     EXPIRES_DELTA: int
