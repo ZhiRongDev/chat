@@ -34,6 +34,15 @@ class Settings(BaseSettings):
     # Default LLM Provider
     DEFAULT_LLM_PROVIDER: str = "gemini"  # Options: gemini, openai, anthropic
 
+    # RAG Configuration
+    EMBEDDING_PROVIDER: str | None = None  # Options: openai, google (auto-detected if None)
+    EMBEDDING_MODEL: str | None = None  # Model name (uses default if None)
+    VECTOR_STORE_TYPE: str = "faiss"  # Options: faiss, chromadb
+    CHUNK_SIZE: int = 512  # Token size for document chunks
+    CHUNK_OVERLAP: int = 50  # Token overlap between chunks
+    RAG_TOP_K: int = 5  # Default number of documents to retrieve
+    RAG_MIN_SCORE: float = 0.3  # Minimum relevance score threshold
+
     SECRET_KEY: str
     EXPIRES_DELTA: int
 

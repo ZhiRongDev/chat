@@ -5,6 +5,7 @@ from typing import Literal, Optional
 from app.config import settings
 from app.service.llm import ChatAgentGraph, LLMFactory, SearchTools
 from app.service.chat_service import ChatService
+from app.service.rag import RAGPipeline
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
 from app.auth import get_current_user
@@ -21,6 +22,9 @@ class ChatPayload(BaseModel):
     model: str | None = None
     temperature: float = 0.7
     use_search: bool = True
+    use_rag: bool = False  # Enable RAG mode
+    top_k: int = 5  # Number of documents to retrieve for RAG
+    min_score: float = 0.3  # Minimum relevance score for RAG
 
 
 class ChatStatusResponse(BaseModel):
@@ -49,11 +53,12 @@ async def get_chat_status():
 @nonauth_router.post("/")
 async def chat_stream(payload: ChatPayload):
     """
-    Enhanced chat endpoint with multi-LLM support and optional search
+    Enhanced chat endpoint with multi-LLM support, optional search, and RAG
 
     Features:
     - Multiple LLM providers (Gemini, OpenAI, Anthropic)
-    - LangGraph-based reasoning workflow
+    - LangGraph-based reasoning workflow (when use_search=True, use_rag=False)
+    - RAG mode with document retrieval (when use_rag=True)
     - Optional Google Search integration via Serper or Tavily
     - Streaming responses
 
@@ -82,28 +87,51 @@ async def chat_stream(payload: ChatPayload):
             )
 
     try:
-        # Create agent graph with specified configuration
-        agent = ChatAgentGraph(
-            provider=payload.provider,
-            model=payload.model,
-            temperature=payload.temperature,
-            use_search=payload.use_search,
-        )
+        # Choose between RAG mode and standard agent mode
+        if payload.use_rag:
+            # RAG Pipeline mode
+            rag_pipeline = RAGPipeline(
+                llm_provider=payload.provider,
+                llm_model=payload.model,
+                llm_temperature=payload.temperature,
+                top_k=payload.top_k,
+                min_score=payload.min_score,
+            )
 
-        async def stream_messages():
-            """Stream chat response using LangGraph agent"""
-            try:
-                async for chunk in agent.astream(user_message):
-                    # Yield control back to the event loop
-                    # This ensures Starlette/Uvicorn sends the chunk immediately
-                    await asyncio.sleep(0)
-                    yield chunk.encode("utf-8")
+            async def stream_rag_messages():
+                """Stream RAG response"""
+                try:
+                    async for chunk in rag_pipeline.astream(user_message):
+                        await asyncio.sleep(0)
+                        yield chunk.encode("utf-8")
 
-            except Exception as e:
-                error_msg = f"Error during chat generation: {str(e)}"
-                yield error_msg.encode("utf-8")
+                except Exception as e:
+                    error_msg = f"Error during RAG generation: {str(e)}"
+                    yield error_msg.encode("utf-8")
 
-        return StreamingResponse(stream_messages(), media_type="text/plain")
+            return StreamingResponse(stream_rag_messages(), media_type="text/plain")
+
+        else:
+            # Standard agent mode with optional search
+            agent = ChatAgentGraph(
+                provider=payload.provider,
+                model=payload.model,
+                temperature=payload.temperature,
+                use_search=payload.use_search,
+            )
+
+            async def stream_messages():
+                """Stream chat response using LangGraph agent"""
+                try:
+                    async for chunk in agent.astream(user_message):
+                        await asyncio.sleep(0)
+                        yield chunk.encode("utf-8")
+
+                except Exception as e:
+                    error_msg = f"Error during chat generation: {str(e)}"
+                    yield error_msg.encode("utf-8")
+
+            return StreamingResponse(stream_messages(), media_type="text/plain")
 
     except ValueError as e:
         # Handle LLM configuration errors

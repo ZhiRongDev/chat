@@ -2,10 +2,13 @@
 FROM python:3.13-slim AS base
 
 # Prevent Python from buffering stdout/stderr
+# Force CPU-only execution for PyTorch/sentence-transformers
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    CUDA_VISIBLE_DEVICES="" \
+    TORCH_DEVICE=cpu
 
 # Set working directory
 WORKDIR /app/backend

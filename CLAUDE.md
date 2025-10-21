@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a resume generator application built with a RAG (Retrieval-Augmented Generation) implementation. The system accepts text descriptions, PDFs, images, or URLs to generate LaTeX resumes with features including user registration (SSO), version comparison, keyword updates, and AI-powered career recommendations.
+This is a **RAG (Retrieval-Augmented Generation) chat application** that combines LLM capabilities with document-based knowledge retrieval. The system allows users to:
+- Upload documents (PDF, TXT, MD) to build a knowledge base
+- Chat with AI using standard LLM responses or RAG-enhanced responses
+- Retrieve relevant context from documents to answer queries
+- Manage document libraries with user authentication
 
 ## Architecture
 
@@ -18,7 +22,11 @@ This is a resume generator application built with a RAG (Retrieval-Augmented Gen
 - **Frontend**: Vue 3, TypeScript, Pinia (state management), Vue Router, Bootstrap 5, Axios
 - **Backend**: FastAPI, SQLModel, PostgreSQL, Redis, JWT authentication, bcrypt
 - **Infrastructure**: Docker Compose, Nginx (production), Gunicorn
-- **AI/ML**: Gemini API, Langchain, Langgraph (planned)
+- **AI/ML**:
+  - LLMs: Gemini API, OpenAI, Anthropic (via Langchain)
+  - RAG: FAISS, ChromaDB (vector stores)
+  - Embeddings: OpenAI Embeddings, Google Embeddings
+  - Frameworks: Langchain, Langgraph
 
 ## Development Commands
 
@@ -103,9 +111,11 @@ docker-compose logs -f frontend
 - **ID Generation**: Snowflake IDs for distributed unique identifiers (worker-based)
 - **Models location**: `backend/app/model/`
   - `user_model.py`: User table with Snowflake IDs, bcrypt password hashing
-  - `chat_model.py`: Chat-related models
+  - `chat_model.py`: Chat history and messages
+  - `document_model.py`: Document metadata, chunks, and vector store config
 - **Database**: PostgreSQL via docker-compose (port 5432)
 - **Caching**: Redis via docker-compose (port 6379)
+- **Vector Store**: FAISS/ChromaDB for document embeddings (stored in `data/vector_stores/`)
 
 ### Authentication & Authorization
 - **JWT tokens**: Created in `app/auth.py` using `create_access_token()`
@@ -117,10 +127,18 @@ docker-compose logs -f frontend
 ### Router Structure
 - **Main router**: `app/router/__init__.py` aggregates all sub-routers
 - **API prefix**: All routes prefixed with `/api/v1` (configured in `config.py`)
-- **User routes**:
+- **User routes** (`user_router.py`):
   - Authenticated: `/api/v1/user/` (requires JWT)
   - Non-authenticated: `/api/v1/user/` (registration)
-- **Chat routes**: In `app/router/chat_router.py`
+- **Chat routes** (`chat_router.py`):
+  - `/api/v1/chat/` - Chat with LLM (supports RAG mode)
+  - `/api/v1/chat/history` - Chat history management
+- **Document routes** (`document_router.py`):
+  - `/api/v1/documents/upload` - Upload documents
+  - `/api/v1/documents/ingest/text` - Ingest text
+  - `/api/v1/documents/ingest/url` - Ingest from URL
+  - `/api/v1/documents/` - List documents
+  - `/api/v1/documents/{id}` - Get/delete document
 
 ### Configuration
 - **Settings**: Pydantic BaseSettings in `app/config.py`
@@ -130,7 +148,17 @@ docker-compose logs -f frontend
 
 ### Services Layer
 - Business logic in `app/service/` directory
-- `user_service.py`: User CRUD operations, password hashing/verification
+- **User Service** (`user_service.py`): User CRUD operations, password hashing/verification
+- **Chat Service** (`chat_service.py`): Chat history and message management
+- **LLM Service** (`llm/`): Multi-provider LLM support (Gemini, OpenAI, Anthropic)
+- **RAG Service** (`rag/`): Complete RAG pipeline implementation
+  - `embedding_service.py`: Text embedding generation
+  - `vector_store.py`: FAISS/ChromaDB management
+  - `query_processor.py`: Query preprocessing
+  - `retrieval_service.py`: Semantic document retrieval
+  - `prompt_builder.py`: Context-aware prompt construction
+  - `rag_pipeline.py`: End-to-end RAG orchestration
+  - `document_ingestion.py`: Document processing and indexing
 
 ## Frontend Architecture
 
@@ -195,3 +223,74 @@ docker-compose logs -f frontend
 
 ## Node Version
 Project requires Node.js version ^20.19.0 or >=22.12.0 (specified in `frontend/package.json`).
+
+## RAG (Retrieval-Augmented Generation)
+
+### Overview
+The application implements a complete RAG system that enhances LLM responses with relevant context from a knowledge base.
+
+### RAG Pipeline
+```
+User Query → Query Preprocessing → Vector Store Search → Top-k Documents
+    ↓
+Prompt Builder → LLM → Response with Citations
+```
+
+### Key Components
+1. **Query Preprocessing**: Clean query, generate embedding
+2. **Vector Store**: FAISS/ChromaDB for semantic search
+3. **Retrieval**: Top-k most relevant document chunks
+4. **Prompt Builder**: Format context with query for LLM
+5. **Response Generator**: LLM with citations
+
+### Using RAG
+
+**Chat with RAG enabled:**
+```bash
+curl -X POST http://localhost:5000/api/v1/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What is machine learning?",
+    "use_rag": true,
+    "top_k": 5,
+    "min_score": 0.3
+  }'
+```
+
+**Upload documents:**
+```bash
+curl -X POST http://localhost:5000/api/v1/documents/upload \
+  -H "Authorization: Bearer <token>" \
+  -F "file=@document.pdf"
+```
+
+**Ingest text:**
+```bash
+curl -X POST http://localhost:5000/api/v1/documents/ingest/text \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "ML Basics",
+    "content": "Machine learning is a subset of AI..."
+  }'
+```
+
+### Configuration
+```bash
+# .env configuration
+EMBEDDING_PROVIDER=openai              # or google
+EMBEDDING_MODEL=text-embedding-3-small
+VECTOR_STORE_TYPE=faiss                # or chromadb
+CHUNK_SIZE=512
+CHUNK_OVERLAP=50
+RAG_TOP_K=5
+RAG_MIN_SCORE=0.3
+```
+
+### Architecture Details
+See [RAG_ARCHITECTURE.md](backend/RAG_ARCHITECTURE.md) for complete documentation including:
+- Detailed component descriptions
+- API endpoint reference
+- Performance tuning
+- Best practices
+- Troubleshooting guide

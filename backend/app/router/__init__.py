@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from app.router import user_router, chat_router
+from app.router import user_router, chat_router, document_router
 from app.service.user_service import UserService
 from app.auth import create_access_token, CreateAccessTokenPayload, get_current_user
 from pydantic import BaseModel
@@ -11,8 +11,10 @@ from app.config import settings
 router = APIRouter(prefix=settings.API_STR)
 router.include_router(user_router.nonauth_router)
 router.include_router(chat_router.nonauth_router)
+router.include_router(document_router.nonauth_router)
 router.include_router(user_router.auth_router)
 router.include_router(chat_router.auth_router)
+router.include_router(document_router.auth_router)
 
 
 class Token(BaseModel):
