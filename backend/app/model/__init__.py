@@ -3,6 +3,7 @@ from sqlmodel import SQLModel, create_engine
 from app.config import settings
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
+from app.model.document_model import Document
 
 DEFAULT_DB = "postgres"  # always exists by default
 

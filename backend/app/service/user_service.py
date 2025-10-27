@@ -32,3 +32,12 @@ class UserService:
             statement = select(User).where(User.username == username)
             result = session.exec(statement).first()  # fetch one row or None
         return result
+
+    @staticmethod
+    def update_user(user: User) -> User:
+        """Update an existing user in the database."""
+        with Session(engine) as session:
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+        return user

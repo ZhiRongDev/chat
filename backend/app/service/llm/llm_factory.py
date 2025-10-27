@@ -44,7 +44,7 @@ class LLMFactory:
             if not settings.GEMINI_API_KEY:
                 raise ValueError("GEMINI_API_KEY is not configured")
             return ChatGoogleGenerativeAI(
-                model=model or "gemini-2.0-flash-exp",
+                model=model or "gemini-2.5-flash",
                 google_api_key=settings.GEMINI_API_KEY,
                 temperature=temperature,
                 streaming=streaming,

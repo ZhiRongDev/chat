@@ -70,6 +70,7 @@ uvicorn==0.37.0
 uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1
+alembic==1.15.0
 
 # LangChain and LangGraph
 langchain==0.3.13
@@ -94,3 +95,8 @@ sentence-transformers==3.3.1
 langchain-chroma==0.2.0
 tiktoken==0.8.0
 pypdf==5.1.0
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.2
+pytest-cov==6.0.0

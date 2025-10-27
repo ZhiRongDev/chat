@@ -129,6 +129,12 @@
 
       <!-- Input -->
       <div class="input-area">
+        <div v-if="chatSettings.useRag" class="rag-indicator">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+          </svg>
+          RAG Mode Active (Top-{{ chatSettings.topK }})
+        </div>
         <div class="input-wrapper">
           <input
             v-model="currentMessage"
@@ -275,11 +281,14 @@
         <!-- Settings -->
         <template v-if="modalType === 'settings'">
           <div class="modal-body">
-            <p>{{ modalContent }}</p>
-            <div class="modal-footer">
-              <button class="modal-btn-cancel" @click="closeModal">Cancel</button>
-              <button class="modal-btn-confirm">Confirm</button>
-            </div>
+            <ChatSettings v-model="chatSettings" @show-documents="showDocumentManager" />
+          </div>
+        </template>
+
+        <!-- Document Manager -->
+        <template v-if="modalType === 'documents'">
+          <div class="modal-body" style="padding: 0; max-height: 80vh; overflow-y: auto;">
+            <DocumentManager />
           </div>
         </template>
       </div>
@@ -291,9 +300,21 @@
 import { ref, nextTick, onMounted, computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
+import ChatSettings, { type ChatSettings as ChatSettingsType } from '@/components/ChatSettings.vue'
+import DocumentManager from '@/components/DocumentManager.vue'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => !!userStore.user.username)
+
+// Chat settings with RAG configuration
+const chatSettings = ref<ChatSettingsType>({
+  useRag: false,
+  topK: 5,
+  minScore: 0.3,
+  provider: '',
+  model: '',
+  temperature: 0.7,
+})
 
 const messages = ref<Message[]>([
   { id: '1', text: 'Hello! How can I help you today?', sender: 'bot' },
@@ -371,10 +392,33 @@ const sendMessage = async () => {
   })
 
   try {
+    // Build request payload with RAG settings
+    const payload: any = {
+      message: userMessageText,
+    }
+
+    // Add RAG parameters if enabled
+    if (chatSettings.value.useRag) {
+      payload.use_rag = true
+      payload.top_k = chatSettings.value.topK
+      payload.min_score = chatSettings.value.minScore
+    }
+
+    // Add LLM provider settings if specified
+    if (chatSettings.value.provider) {
+      payload.provider = chatSettings.value.provider
+    }
+    if (chatSettings.value.model) {
+      payload.model = chatSettings.value.model
+    }
+    if (chatSettings.value.temperature !== 0.7) {
+      payload.temperature = chatSettings.value.temperature
+    }
+
     const res = await fetch('http://localhost:5000/api/v1/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: userMessageText }),
+      body: JSON.stringify(payload),
     })
 
     // Ensure the response body is available and the request was successful
@@ -577,7 +621,15 @@ const showModal = (type: string) => {
   } else if (type === 'settings') {
     modalTitle.value = 'Settings'
     modalContent.value = 'Manage your preferences'
+  } else if (type === 'documents') {
+    modalTitle.value = 'Document Library'
+    modalContent.value = 'Manage your documents'
   }
+}
+
+const showDocumentManager = () => {
+  closeModal()
+  showModal('documents')
 }
 
 const closeModal = () => {
@@ -990,7 +1042,21 @@ const handleRegister = async () => {
   border-top: 1px solid #e5e7eb;
   background: #fff;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rag-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
 }
 
 .input-wrapper {

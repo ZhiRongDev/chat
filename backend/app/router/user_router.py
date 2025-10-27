@@ -2,8 +2,9 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, field_serializer
 from app.model import User
 from app.service.user_service import UserService
-from app.auth import get_current_user, create_access_token, CreateAccessTokenPayload
+from app.auth import get_current_user, create_access_token, CreateAccessTokenPayload, verify_access_token
 from app.error import ErrorCode
+from datetime import timedelta
 
 auth_router = APIRouter(
     prefix="/user", tags=["user"], dependencies=[Depends(get_current_user)]
@@ -99,3 +100,95 @@ async def login(payload: UserPayload):
         token_type="bearer",
         user=UserResponse(id=str(user.id), username=user.username, created_at=user.created_at),
     )
+
+
+class ForgotPasswordPayload(BaseModel):
+    username: str
+
+
+class ResetPasswordPayload(BaseModel):
+    token: str
+    new_password: str
+
+
+class MessageResponse(BaseModel):
+    message: str
+
+
+@nonauth_router.post("/forgot-password", response_model=MessageResponse)
+async def forgot_password(payload: ForgotPasswordPayload):
+    """
+    Request a password reset token.
+
+    - **username**: Username of the account to reset
+
+    In a production environment, this would send an email with the reset token.
+    For now, the token is returned in the response (ONLY FOR DEVELOPMENT).
+    """
+    user_service = UserService()
+
+    user = user_service.get_user_by_username(payload.username)
+    if not user:
+        # Don't reveal if user exists or not for security
+        return MessageResponse(
+            message="If the username exists, a password reset token has been generated."
+        )
+
+    # Generate a reset token (valid for 1 hour)
+    reset_token = create_access_token(
+        CreateAccessTokenPayload(sub=user.username, reset=True),
+        expires_delta=timedelta(hours=1)
+    )
+
+    # TODO: In production, send this token via email instead of returning it
+    # For now, we'll return it in the response for development purposes
+    return MessageResponse(
+        message=f"Password reset token (DEV ONLY - should be emailed): {reset_token}"
+    )
+
+
+@nonauth_router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(payload: ResetPasswordPayload):
+    """
+    Reset password using a valid reset token.
+
+    - **token**: The reset token received from forgot-password endpoint
+    - **new_password**: The new password to set
+
+    Returns success message if password is reset.
+    """
+    user_service = UserService()
+
+    try:
+        # Verify the reset token
+        token_data = verify_access_token(payload.token)
+        username = token_data.get('sub')
+
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reset token"
+            )
+
+        # Get the user
+        user = user_service.get_user_by_username(username)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorCode.USER_NOT_FOUND
+            )
+
+        # Hash the new password and update
+        hashed_password = user_service.hash_the_password(payload.new_password)
+        user.password = hashed_password
+        user_service.update_user(user)
+
+        return MessageResponse(message="Password has been reset successfully")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
