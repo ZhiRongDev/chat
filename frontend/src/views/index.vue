@@ -63,106 +63,117 @@
       </div>
     </div>
 
-    <!-- Modal -->
-    <div v-if="modalOpen" class="modal-overlay" @click.self="closeModal">
-      <div class="modal">
-        <div class="modal-header">
-          <h2>{{ modalTitle }}</h2>
-          <button class="close-btn" @click="closeModal">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
+    <!-- Bootstrap Modal -->
+    <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
+      data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="appModalLabel">{{ modalTitle }}</h5>
+            <button type="button" class="btn-close" @click="closeModal" aria-label="Close"></button>
+          </div>
+
+          <!-- Login Form -->
+          <template v-if="modalType === 'login'">
+            <div class="modal-body">
+              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+                {{ errorMessage }}
+              </div>
+              <form @submit.prevent="handleLogin">
+                <div class="mb-3">
+                  <label for="login-username" class="form-label">Username</label>
+                  <input v-model="loginForm.username" type="text" class="form-control" id="login-username"
+                    placeholder="Enter your username" required :disabled="formLoading" />
+                </div>
+                <div class="mb-3">
+                  <label for="login-password" class="form-label">Password</label>
+                  <input v-model="loginForm.password" type="password" class="form-control" id="login-password"
+                    placeholder="Enter your password" required :disabled="formLoading" />
+                </div>
+                <div class="modal-footer border-0 px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary" :disabled="formLoading">
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
+                    {{ formLoading ? 'Logging in...' : 'Login' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </template>
+
+          <!-- Register Form -->
+          <template v-if="modalType === 'register'">
+            <div class="modal-body">
+              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+                {{ errorMessage }}
+              </div>
+              <form @submit.prevent="handleRegister">
+                <div class="mb-3">
+                  <label for="register-username" class="form-label">Username</label>
+                  <input v-model="registerForm.username" type="text" class="form-control" id="register-username"
+                    placeholder="Enter your username" required :disabled="formLoading" />
+                </div>
+                <div class="mb-3">
+                  <label for="register-password" class="form-label">Password</label>
+                  <input v-model="registerForm.password" type="password" class="form-control" id="register-password"
+                    placeholder="Enter your password" required :disabled="formLoading" />
+                </div>
+                <div class="mb-3">
+                  <label for="register-confirm" class="form-label">Confirm Password</label>
+                  <input v-model="registerForm.confirmPassword" type="password" class="form-control"
+                    id="register-confirm" placeholder="Confirm your password" required :disabled="formLoading" />
+                </div>
+                <div class="modal-footer border-0 px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary" :disabled="formLoading">
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
+                    {{ formLoading ? 'Registering...' : 'Register' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </template>
+
+          <!-- Settings -->
+          <template v-if="modalType === 'settings'">
+            <div class="modal-body">
+              <ChatSettings v-model="chatSettings" @show-documents="showDocumentManager" />
+            </div>
+          </template>
+
+          <!-- Document Manager -->
+          <template v-if="modalType === 'documents'">
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+              <DocumentManager />
+            </div>
+          </template>
         </div>
-
-        <!-- Login Form -->
-        <template v-if="modalType === 'login'">
-          <div class="modal-body">
-            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-            <form @submit.prevent="handleLogin">
-              <div class="form-group">
-                <label for="login-username">Username</label>
-                <input v-model="loginForm.username" type="text" id="login-username" placeholder="Enter your username"
-                  required :disabled="formLoading" />
-              </div>
-              <div class="form-group">
-                <label for="login-password">Password</label>
-                <input v-model="loginForm.password" type="password" id="login-password"
-                  placeholder="Enter your password" required :disabled="formLoading" />
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="modal-btn-confirm" :disabled="formLoading">
-                  {{ formLoading ? 'Logging in...' : 'Login' }}
-                </button>
-                <button type="button" class="modal-btn-cancel" @click="closeModal" :disabled="formLoading">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </template>
-
-        <!-- Register Form -->
-        <template v-if="modalType === 'register'">
-          <div class="modal-body">
-            <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
-            <form @submit.prevent="handleRegister">
-              <div class="form-group">
-                <label for="register-username">Username</label>
-                <input v-model="registerForm.username" type="text" id="register-username"
-                  placeholder="Enter your username" required :disabled="formLoading" />
-              </div>
-              <div class="form-group">
-                <label for="register-password">Password</label>
-                <input v-model="registerForm.password" type="password" id="register-password"
-                  placeholder="Enter your password" required :disabled="formLoading" />
-              </div>
-              <div class="form-group">
-                <label for="register-confirm">Confirm Password</label>
-                <input v-model="registerForm.confirmPassword" type="password" id="register-confirm"
-                  placeholder="Confirm your password" required :disabled="formLoading" />
-              </div>
-              <div class="modal-footer">
-                <button type="submit" class="modal-btn-confirm" :disabled="formLoading">
-                  {{ formLoading ? 'Registering...' : 'Register' }}
-                </button>
-                <button type="button" class="modal-btn-cancel" @click="closeModal" :disabled="formLoading">
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </template>
-
-        <!-- Settings -->
-        <template v-if="modalType === 'settings'">
-          <div class="modal-body">
-            <ChatSettings v-model="chatSettings" @show-documents="showDocumentManager" />
-          </div>
-        </template>
-
-        <!-- Document Manager -->
-        <template v-if="modalType === 'documents'">
-          <div class="modal-body" style="padding: 0; max-height: 80vh; overflow-y: auto;">
-            <DocumentManager />
-          </div>
-        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, computed } from 'vue'
+import { ref, nextTick, onMounted, computed, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
 import Sidebar from '@/components/Sidebar.vue'
 import ChatSettings, { type ChatSettings as ChatSettingsType } from '@/components/ChatSettings.vue'
 import DocumentManager from '@/components/DocumentManager.vue'
 import { appendAlert } from '@/utils/alert'
+import { Modal } from 'bootstrap'
 
 const userStore = useUserStore()
 const isLoggedIn = computed(() => !!userStore.user.username)
+
+// Bootstrap modal instance
+let bootstrapModal: Modal | null = null
 
 // Chat settings with RAG configuration
 const chatSettings = ref<ChatSettingsType>({
@@ -181,10 +192,8 @@ const currentMessage = ref('')
 const loading = ref(false)
 const sidebarOpen = ref(true)
 const endOfMessages = ref<HTMLElement | null>(null)
-const modalOpen = ref(false)
 const modalType = ref('')
 const modalTitle = ref('')
-const modalContent = ref('')
 const chatHistories = ref<ChatHistoryItem[]>([])
 const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
@@ -205,6 +214,12 @@ const registerForm = ref({
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
   try {
+    // Initialize Bootstrap modal
+    const modalElement = document.getElementById('appModal')
+    if (modalElement) {
+      bootstrapModal = new Modal(modalElement)
+    }
+
     if (isLoggedIn.value) {
       await loadChatHistories()
 
@@ -216,6 +231,13 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Failed to load chat histories:', error)
+  }
+})
+
+// Cleanup on unmount
+onUnmounted(() => {
+  if (bootstrapModal) {
+    bootstrapModal.dispose()
   }
 })
 
@@ -468,34 +490,41 @@ const handleLogout = async () => {
 
 const showModal = (type: string) => {
   modalType.value = type
-  modalOpen.value = true
 
   if (type === 'login') {
     modalTitle.value = 'Login'
-    modalContent.value = 'Enter your credentials to login'
   } else if (type === 'register') {
     modalTitle.value = 'Register'
-    modalContent.value = 'Create a new account'
   } else if (type === 'settings') {
     modalTitle.value = 'Settings'
-    modalContent.value = 'Manage your preferences'
   } else if (type === 'documents') {
     modalTitle.value = 'Document Library'
-    modalContent.value = 'Manage your documents'
+  }
+
+  // Show Bootstrap modal
+  if (bootstrapModal) {
+    bootstrapModal.show()
   }
 }
 
 const showDocumentManager = () => {
   closeModal()
-  showModal('documents')
+  // Use nextTick to ensure modal is closed before opening new one
+  nextTick(() => {
+    showModal('documents')
+  })
 }
 
 const closeModal = () => {
-  modalOpen.value = false
   errorMessage.value = ''
   formLoading.value = false
   loginForm.value = { username: '', password: '' }
   registerForm.value = { username: '', password: '', confirmPassword: '' }
+
+  // Hide Bootstrap modal
+  if (bootstrapModal) {
+    bootstrapModal.hide()
+  }
 }
 
 const handleLogin = async () => {
@@ -811,64 +840,48 @@ const handleRegister = async () => {
   stroke-width: 2;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+/* Bootstrap Modal Custom Styles */
+.modal-dialog {
+  margin: 1.75rem auto;
+  max-width: 500px;
+}
+
+.modal-dialog.modal-lg {
+  max-width: 800px;
+}
+
+.modal-dialog-centered {
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  animation: fadeIn 0.2s ease-out;
+  min-height: calc(100% - 3.5rem);
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal {
-  display: block;
-  background: white;
+.modal-content {
+  border: none;
   border-radius: 12px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(0, 0, 0, 0.05);
-  max-width: 440px;
+  margin: 0 auto;
   width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background-color: #fff;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111;
 }
 
 .modal-body {
   padding: 24px;
-  max-height: calc(90vh - 160px);
+  max-height: 70vh;
   overflow-y: auto;
-  overflow-x: hidden;
 }
 
 .modal-body::-webkit-scrollbar {
@@ -888,180 +901,161 @@ const handleRegister = async () => {
   background: #9ca3af;
 }
 
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.modal-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111;
-  margin: 0;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.btn-close {
+  padding: 8px;
+  opacity: 0.5;
   transition: all 0.15s ease;
-  border-radius: 6px;
-  color: #666;
 }
 
-.close-btn:hover {
-  background-color: #f5f5f5;
-  color: #111;
+.btn-close:hover {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
-.close-btn:active {
-  transform: scale(0.95);
+.btn-close:focus {
+  box-shadow: none;
 }
 
-.close-btn svg {
-  width: 20px;
-  height: 20px;
-  stroke: currentColor;
+/* Bootstrap fade animation override for smoother transition */
+.modal.fade .modal-dialog {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-content {
-  padding: 20px;
-  color: #666;
-  font-size: 14px;
-  display: flex;
-  gap: 12px;
-  padding: 20px;
-  border-top: 1px solid #e5e7eb;
-  justify-content: flex-end;
-}
-
-.modal-btn-cancel {
-  padding: 10px 20px;
-  background-color: white;
-  color: #333;
+/* Form Input Styles - Modern Dark Theme */
+.form-control {
+  padding: 12px 16px;
+  font-size: 15px;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-}
-
-.modal-btn-cancel:hover {
-  background-color: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.modal-btn-cancel:active {
-  transform: scale(0.98);
-}
-
-.modal-btn-confirm {
-  padding: 10px 20px;
-  background-color: #111;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.15s ease;
-}
-
-.modal-btn-confirm:hover {
-  background-color: #000;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.modal-btn-confirm:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.form-group {
-  margin-bottom: 18px;
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group:last-of-type {
-  margin-bottom: 0;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #111;
-  margin-bottom: 8px;
-}
-
-.form-group input {
-  padding: 12px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   background-color: #fff;
 }
 
-.form-group input:hover {
+.form-control:hover:not(:disabled) {
   border-color: #d1d5db;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #111;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+.form-control:focus {
+  border-color: #111827;
+  background-color: #fff;
+  outline: 2px solid #111827;
+  outline-offset: -1px;
 }
 
-.modal-content form {
-  display: flex;
-  flex-direction: column;
+.form-control:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
+.form-control::placeholder {
+  color: #9ca3af;
+}
+
+.form-label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+/* Alert Styles */
+.alert {
+  border-radius: 8px;
+  border: none;
+  padding: 12px 16px;
+  font-size: 14px;
+}
+
+.alert-danger {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border-left: 4px solid #dc2626;
+}
+
+/* Modal Footer Styles */
 .modal-footer {
   display: flex;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 0;
-  border-top: none;
-  justify-content: flex-start;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 20px;
 }
 
-.modal-footer button {
-  flex: 1;
+/* Button Styles - Modern Dark Theme */
+.btn {
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  line-height: 1.5;
 }
 
-.modal-footer button:first-child {
-  order: 1;
+.btn-primary {
+  background-color: #111827;
+  border: 1px solid #111827;
+  color: #fff;
 }
 
-.modal-footer button:last-child {
-  order: 2;
+.btn-primary:hover:not(:disabled) {
+  background-color: #000;
+  border-color: #000;
+  color: #fff;
 }
 
-.error-message {
-  padding: 12px 16px;
-  background-color: #fee;
-  border: 1px solid #fcc;
-  border-radius: 6px;
-  color: #c33;
-  font-size: 14px;
-  margin-bottom: 16px;
+.btn-primary:active:not(:disabled) {
+  background-color: #1f2937;
+  border-color: #1f2937;
 }
 
-.modal-btn-confirm:disabled,
-.modal-btn-cancel:disabled {
+.btn-primary:focus {
+  outline: 2px solid #374151;
+  outline-offset: 2px;
+}
+
+.btn-primary:disabled {
+  background-color: #6b7280;
+  border-color: #6b7280;
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.btn-secondary:active:not(:disabled) {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.btn-secondary:focus {
+  outline: 2px solid #d1d5db;
+  outline-offset: 2px;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Spinner Styles */
+.spinner-border-sm {
+  width: 16px;
+  height: 16px;
+  border-width: 2px;
 }
 </style>
