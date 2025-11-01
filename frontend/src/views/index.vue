@@ -508,11 +508,9 @@ const showModal = (type: string) => {
 }
 
 const showDocumentManager = () => {
-  closeModal()
-  // Use nextTick to ensure modal is closed before opening new one
-  nextTick(() => {
-    showModal('documents')
-  })
+  // Simply change the modal type without closing/reopening
+  modalType.value = 'documents'
+  modalTitle.value = 'Document Library'
 }
 
 const closeModal = () => {
