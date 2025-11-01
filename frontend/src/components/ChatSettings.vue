@@ -15,12 +15,7 @@
             Enable RAG Mode
           </label>
           <div class="form-check form-switch">
-            <input
-              v-model="localSettings.useRag"
-              class="form-check-input"
-              type="checkbox"
-              id="ragToggle"
-            />
+            <input v-model="localSettings.useRag" class="form-check-input" type="checkbox" id="ragToggle" />
           </div>
         </div>
         <small class="text-muted">
@@ -31,15 +26,8 @@
       <div v-if="localSettings.useRag" class="rag-options">
         <div class="setting-item">
           <label for="topK">Top-K Results: {{ localSettings.topK }}</label>
-          <input
-            v-model.number="localSettings.topK"
-            type="range"
-            class="form-range"
-            id="topK"
-            min="1"
-            max="10"
-            step="1"
-          />
+          <input v-model.number="localSettings.topK" type="range" class="form-range" id="topK" min="1" max="10"
+            step="1" />
           <small class="text-muted">
             Number of relevant document chunks to retrieve (1-10)
           </small>
@@ -47,15 +35,8 @@
 
         <div class="setting-item">
           <label for="minScore">Minimum Relevance Score: {{ localSettings.minScore.toFixed(2) }}</label>
-          <input
-            v-model.number="localSettings.minScore"
-            type="range"
-            class="form-range"
-            id="minScore"
-            min="0"
-            max="1"
-            step="0.05"
-          />
+          <input v-model.number="localSettings.minScore" type="range" class="form-range" id="minScore" min="0" max="1"
+            step="0.05" />
           <small class="text-muted">
             Minimum similarity threshold (0.0 = any relevance, 1.0 = exact match)
           </small>
@@ -72,11 +53,7 @@
 
       <div class="setting-item">
         <label for="provider">Provider</label>
-        <select
-          v-model="localSettings.provider"
-          class="form-select"
-          id="provider"
-        >
+        <select v-model="localSettings.provider" class="form-select" id="provider">
           <option value="">Auto-detect</option>
           <option value="gemini">Google Gemini</option>
           <option value="openai">OpenAI</option>
@@ -89,13 +66,8 @@
 
       <div class="setting-item">
         <label for="model">Model (optional)</label>
-        <input
-          v-model="localSettings.model"
-          type="text"
-          class="form-control"
-          id="model"
-          placeholder="e.g., gpt-4, gemini-pro"
-        />
+        <input v-model="localSettings.model" type="text" class="form-control" id="model"
+          placeholder="e.g., gpt-4, gemini-pro" />
         <small class="text-muted">
           Leave empty to use provider's default model
         </small>
@@ -103,15 +75,8 @@
 
       <div class="setting-item">
         <label for="temperature">Temperature: {{ localSettings.temperature.toFixed(1) }}</label>
-        <input
-          v-model.number="localSettings.temperature"
-          type="range"
-          class="form-range"
-          id="temperature"
-          min="0"
-          max="2"
-          step="0.1"
-        />
+        <input v-model.number="localSettings.temperature" type="range" class="form-range" id="temperature" min="0"
+          max="2" step="0.1" />
         <small class="text-muted">
           Lower = more focused, Higher = more creative (0.0-2.0)
         </small>
@@ -120,25 +85,73 @@
 
     <!-- Document Library -->
     <div class="settings-section">
-      <h5>
-        <i class="bi bi-folder"></i>
-        Document Library
-      </h5>
+      <div class="section-header">
+        <h5>
+          <i class="bi bi-folder"></i>
+          Document Library
+        </h5>
+        <button class="btn-refresh" @click="fetchDocuments" :disabled="loadingDocuments" title="Refresh document list">
+          <i :class="['bi bi-arrow-clockwise', { 'spinning': loadingDocuments }]"></i>
+        </button>
+      </div>
+
+      <!-- Document List -->
+      <div v-if="documents.length > 0" class="document-list">
+        <div v-for="doc in documents" :key="doc.id" class="document-item">
+          <div class="document-info">
+            <div class="document-header">
+              <i :class="getFileIcon(doc.file_type)"></i>
+              <div class="document-details">
+                <strong>{{ doc.filename }}</strong>
+                <div class="document-meta">
+                  <span class="file-size">{{ formatFileSize(doc.file_size) }}</span>
+                  <span class="separator">•</span>
+                  <span class="chunk-count">{{ doc.chunk_count }} chunks</span>
+                  <span class="separator">•</span>
+                  <span class="upload-date">{{ formatDate(doc.created_at) }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="document-status">
+              <span :class="['status-badge', doc.status]">
+                <i :class="getStatusIcon(doc.status)"></i>
+                {{ doc.status }}
+              </span>
+            </div>
+          </div>
+          <div class="document-actions">
+            <button class="btn-action btn-preview" @click="previewDocument(doc.id)"
+              :disabled="doc.status !== 'completed'" title="Preview document chunks">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn-action btn-delete" @click="confirmDeleteDocument(doc.id)" title="Delete document">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-else-if="!loadingDocuments" class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <p>No documents uploaded yet</p>
+        <small>Upload your first document to get started</small>
+      </div>
+
+      <div v-if="loadingDocuments" class="loading-state">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p>Loading documents...</p>
+      </div>
 
       <!-- Upload Section -->
       <div class="upload-section">
         <div class="upload-tabs">
-          <button
-            :class="['tab-btn', { active: uploadTab === 'file' }]"
-            @click="uploadTab = 'file'"
-          >
+          <button :class="['tab-btn', { active: uploadTab === 'file' }]" @click="uploadTab = 'file'">
             <i class="bi bi-file-earmark-arrow-up"></i>
             Upload File
           </button>
-          <button
-            :class="['tab-btn', { active: uploadTab === 'text' }]"
-            @click="uploadTab = 'text'"
-          >
+          <button :class="['tab-btn', { active: uploadTab === 'text' }]" @click="uploadTab = 'text'">
             <i class="bi bi-file-text"></i>
             Add Text
           </button>
@@ -147,13 +160,8 @@
         <!-- File Upload Tab -->
         <div v-if="uploadTab === 'file'" class="upload-content">
           <div class="file-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
-            <input
-              ref="fileInput"
-              type="file"
-              accept=".pdf,.txt,.md"
-              @change="handleFileSelect"
-              style="display: none"
-            />
+            <input ref="fileInput" type="file" accept=".pdf,.txt,.md" @change="handleFileSelect"
+              style="display: none" />
             <i class="bi bi-cloud-upload"></i>
             <p>Click to upload or drag and drop</p>
             <small class="text-muted">Supports PDF, TXT, MD files</small>
@@ -165,12 +173,7 @@
               <i class="bi bi-x"></i>
             </button>
           </div>
-          <button
-            v-if="selectedFile"
-            class="btn btn-primary w-100 mt-3"
-            @click="uploadFile"
-            :disabled="uploading"
-          >
+          <button v-if="selectedFile" class="btn btn-primary w-100 mt-3" @click="uploadFile" :disabled="uploading">
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Uploading...' : 'Upload Document' }}
           </button>
@@ -180,29 +183,16 @@
         <div v-if="uploadTab === 'text'" class="upload-content">
           <div class="setting-item">
             <label for="textTitle">Document Title</label>
-            <input
-              v-model="textDocument.title"
-              type="text"
-              class="form-control"
-              id="textTitle"
-              placeholder="Enter document title"
-            />
+            <input v-model="textDocument.title" type="text" class="form-control" id="textTitle"
+              placeholder="Enter document title" />
           </div>
           <div class="setting-item">
             <label for="textContent">Content</label>
-            <textarea
-              v-model="textDocument.content"
-              class="form-control"
-              id="textContent"
-              rows="6"
-              placeholder="Paste or type your content here..."
-            ></textarea>
+            <textarea v-model="textDocument.content" class="form-control" id="textContent" rows="6"
+              placeholder="Paste or type your content here..."></textarea>
           </div>
-          <button
-            class="btn btn-primary w-100"
-            @click="uploadText"
-            :disabled="!textDocument.title || !textDocument.content || uploading"
-          >
+          <button class="btn btn-primary w-100" @click="uploadText"
+            :disabled="!textDocument.title || !textDocument.content || uploading">
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Adding...' : 'Add Document' }}
           </button>
@@ -276,6 +266,34 @@ const resetSettings = () => {
   saveSettings()
 }
 
+// Document state
+interface DocumentItem {
+  id: string
+  filename: string
+  file_type: string
+  file_size: number
+  chunk_count: number
+  status: string
+  created_at: number
+  updated_at: number
+}
+
+interface DocumentDetail extends DocumentItem {
+  error_message?: string
+  metadata?: any
+  chunks?: Array<{
+    id: string
+    chunk_index: number
+    content: string
+    token_count: number
+  }>
+}
+
+const documents = ref<DocumentItem[]>([])
+const loadingDocuments = ref(false)
+const previewModal = ref<DocumentDetail | null>(null)
+const deleteConfirmId = ref<string | null>(null)
+
 // Upload state
 const uploadTab = ref<'file' | 'text'>('file')
 const selectedFile = ref<File | null>(null)
@@ -345,6 +363,8 @@ const uploadFile = async () => {
       message: 'Document uploaded successfully!'
     }
     clearFile()
+    // Refresh document list
+    await fetchDocuments()
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
@@ -393,6 +413,8 @@ const uploadText = async () => {
       message: 'Text document added successfully!'
     }
     textDocument.value = { title: '', content: '' }
+    // Refresh document list
+    await fetchDocuments()
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
@@ -405,6 +427,182 @@ const uploadText = async () => {
       uploadStatus.value = null
     }, 3000)
   }
+}
+
+// Document management functions
+const fetchDocuments = async () => {
+  loadingDocuments.value = true
+  try {
+    const token = localStorage.getItem('token')
+    const headers: HeadersInit = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch('http://localhost:5000/api/v1/documents/', {
+      method: 'GET',
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch documents')
+    }
+
+    documents.value = await response.json()
+  } catch (error: any) {
+    console.error('Error fetching documents:', error)
+    uploadStatus.value = {
+      type: 'error',
+      message: 'Failed to load documents'
+    }
+    setTimeout(() => {
+      uploadStatus.value = null
+    }, 3000)
+  } finally {
+    loadingDocuments.value = false
+  }
+}
+
+const previewDocument = async (documentId: string) => {
+  try {
+    const token = localStorage.getItem('token')
+    const headers: HeadersInit = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(
+      `http://localhost:5000/api/v1/documents/${documentId}?include_chunks=true`,
+      {
+        method: 'GET',
+        headers,
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch document details')
+    }
+
+    const docDetail: DocumentDetail = await response.json()
+    previewModal.value = docDetail
+    // Show modal (we'll add this to the template)
+    showPreviewModal(docDetail)
+  } catch (error: any) {
+    console.error('Error previewing document:', error)
+    alert('Failed to preview document')
+  }
+}
+
+const showPreviewModal = (doc: DocumentDetail) => {
+  // Create a simple alert with document info for now
+  // You can enhance this with a proper modal component
+  const chunkInfo = doc.chunks
+    ? `\n\nChunks Preview:\n${doc.chunks.slice(0, 3).map(c =>
+      `Chunk ${c.chunk_index + 1} (${c.token_count} tokens):\n${c.content}`
+    ).join('\n\n')}`
+    : ''
+
+  alert(`Document: ${doc.filename}\n` +
+    `Type: ${doc.file_type}\n` +
+    `Size: ${formatFileSize(doc.file_size)}\n` +
+    `Status: ${doc.status}\n` +
+    `Chunks: ${doc.chunk_count}\n` +
+    `Created: ${formatDate(doc.created_at)}` +
+    chunkInfo)
+}
+
+const confirmDeleteDocument = (documentId: string) => {
+  deleteConfirmId.value = documentId
+  if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+    deleteDocument(documentId)
+  }
+}
+
+const deleteDocument = async (documentId: string) => {
+  try {
+    const token = localStorage.getItem('token')
+    const headers: HeadersInit = {}
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(`http://localhost:5000/api/v1/documents/${documentId}`, {
+      method: 'DELETE',
+      headers,
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to delete document')
+    }
+
+    uploadStatus.value = {
+      type: 'success',
+      message: 'Document deleted successfully'
+    }
+
+    // Refresh document list
+    await fetchDocuments()
+  } catch (error: any) {
+    console.error('Error deleting document:', error)
+    uploadStatus.value = {
+      type: 'error',
+      message: 'Failed to delete document'
+    }
+  } finally {
+    deleteConfirmId.value = null
+    setTimeout(() => {
+      uploadStatus.value = null
+    }, 3000)
+  }
+}
+
+// Helper functions
+const getFileIcon = (fileType: string): string => {
+  const iconMap: Record<string, string> = {
+    'pdf': 'bi bi-file-pdf text-danger',
+    'txt': 'bi bi-file-text text-primary',
+    'md': 'bi bi-markdown text-info',
+    'text': 'bi bi-file-text text-primary',
+  }
+  return iconMap[fileType.toLowerCase()] || 'bi bi-file-earmark'
+}
+
+const getStatusIcon = (status: string): string => {
+  const iconMap: Record<string, string> = {
+    'completed': 'bi bi-check-circle',
+    'processing': 'bi bi-hourglass-split',
+    'failed': 'bi bi-exclamation-circle',
+    'pending': 'bi bi-clock',
+  }
+  return iconMap[status] || 'bi bi-question-circle'
+}
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+const formatDate = (timestamp: number): string => {
+  const date = new Date(timestamp * 1000) // Convert from Unix timestamp
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (days === 0) {
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    if (hours === 0) {
+      const minutes = Math.floor(diff / (1000 * 60))
+      return minutes <= 1 ? 'Just now' : `${minutes} minutes ago`
+    }
+    return hours === 1 ? '1 hour ago' : `${hours} hours ago`
+  }
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+
+  return date.toLocaleDateString()
 }
 
 // Load settings from localStorage on mount
@@ -421,6 +619,8 @@ const loadSettings = () => {
 }
 
 loadSettings()
+// Load documents on mount
+fetchDocuments()
 </script>
 
 <style scoped>
@@ -481,6 +681,257 @@ loadSettings()
   margin-top: 1rem;
   padding-left: 1rem;
   border-left: 3px solid var(--bs-primary);
+}
+
+/* Section Header with Refresh Button */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h5 {
+  margin-bottom: 0;
+}
+
+.btn-refresh {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.btn-refresh:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #111827;
+  color: #111827;
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-refresh i {
+  font-size: 1.1rem;
+}
+
+.btn-refresh .spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Document List Styles */
+.document-list {
+  margin-bottom: 1.5rem;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background-color 0.2s;
+}
+
+.document-item:last-child {
+  border-bottom: none;
+}
+
+.document-item:hover {
+  background-color: #f9fafb;
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.document-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.document-header>i {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.document-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-details strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 0.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.document-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
+.document-meta .separator {
+  color: #d1d5db;
+}
+
+.document-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.processing {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.failed {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.pending {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-action {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #374151;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-action i {
+  font-size: 1.1rem;
+}
+
+.btn-action:hover:not(:disabled) {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-preview:hover:not(:disabled) {
+  color: #2563eb;
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.btn-delete:hover:not(:disabled) {
+  color: #dc2626;
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #9ca3af;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.empty-state small {
+  color: #9ca3af;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.loading-state p {
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
 }
 
 .settings-actions {
@@ -707,5 +1158,200 @@ textarea.form-control {
   width: 1rem;
   height: 1rem;
   border-width: 2px;
+}
+
+/* Enhanced Document List with Scrollbar */
+.document-list {
+  margin-bottom: 1.5rem;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.document-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.document-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.document-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.document-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+.document-item {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.document-item:hover {
+  border-color: #111827;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.document-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.document-header>i {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.document-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.document-details strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.document-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
+.document-meta .separator {
+  color: #d1d5db;
+}
+
+.document-status {
+  margin-top: 0.5rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge i {
+  font-size: 0.9rem;
+}
+
+.status-badge.completed {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.status-badge.processing {
+  background-color: #fef3c7;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.status-badge.failed {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.status-badge.pending {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+}
+
+.document-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #9ca3af;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 1rem;
+  color: #d1d5db;
+}
+
+.empty-state p {
+  margin: 0.5rem 0;
+  font-weight: 500;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.empty-state small {
+  color: #9ca3af;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.loading-state .spinner-border {
+  margin-bottom: 1rem;
+}
+
+.loading-state p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .document-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .document-actions {
+    justify-content: flex-end;
+    width: 100%;
+    padding-top: 0.5rem;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .document-meta {
+    font-size: 0.8rem;
+  }
 }
 </style>
