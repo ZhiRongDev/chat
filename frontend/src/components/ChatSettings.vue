@@ -363,8 +363,6 @@ const uploadFile = async () => {
       message: 'Document uploaded successfully!'
     }
     clearFile()
-    // Refresh document list
-    await fetchDocuments()
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
@@ -373,6 +371,8 @@ const uploadFile = async () => {
     }
   } finally {
     uploading.value = false
+    // Refresh document list regardless of success or failure
+    await fetchDocuments()
     setTimeout(() => {
       uploadStatus.value = null
     }, 3000)
@@ -413,8 +413,6 @@ const uploadText = async () => {
       message: 'Text document added successfully!'
     }
     textDocument.value = { title: '', content: '' }
-    // Refresh document list
-    await fetchDocuments()
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
@@ -423,6 +421,8 @@ const uploadText = async () => {
     }
   } finally {
     uploading.value = false
+    // Refresh document list regardless of success or failure
+    await fetchDocuments()
     setTimeout(() => {
       uploadStatus.value = null
     }, 3000)
@@ -539,9 +539,6 @@ const deleteDocument = async (documentId: string) => {
       type: 'success',
       message: 'Document deleted successfully'
     }
-
-    // Refresh document list
-    await fetchDocuments()
   } catch (error: any) {
     console.error('Error deleting document:', error)
     uploadStatus.value = {
@@ -550,6 +547,8 @@ const deleteDocument = async (documentId: string) => {
     }
   } finally {
     deleteConfirmId.value = null
+    // Refresh document list regardless of success or failure
+    await fetchDocuments()
     setTimeout(() => {
       uploadStatus.value = null
     }, 3000)
