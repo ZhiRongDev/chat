@@ -83,6 +83,7 @@ defineEmits<{
 <style scoped>
 .sidebar {
   width: 260px;
+  min-width: 260px;
   background-color: #1a1a1a;
   color: white;
   display: flex;
@@ -90,16 +91,23 @@ defineEmits<{
   transition: all 0.3s ease;
   border-right: 1px solid #333;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .sidebar.hidden {
   width: 0;
+  min-width: 0;
   border-right: none;
+}
+
+.sidebar.hidden>* {
+  display: none;
 }
 
 .sidebar-header {
   padding: 16px;
   border-bottom: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .new-chat-btn {
@@ -116,6 +124,7 @@ defineEmits<{
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .new-chat-btn:hover {
@@ -126,9 +135,36 @@ defineEmits<{
 .sidebar-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 8px;
   font-size: 13px;
   color: #888;
+}
+
+/* Custom Scrollbar Styles */
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Firefox Scrollbar */
+.sidebar-content {
+  scrollbar-width: thin;
+  scrollbar-color: #444 transparent;
 }
 
 .no-history {
@@ -155,6 +191,7 @@ defineEmits<{
   background-color: transparent;
   position: relative;
   gap: 8px;
+  min-width: 0;
 }
 
 .chat-history-item:hover {
@@ -167,6 +204,7 @@ defineEmits<{
 
 .chat-history-title {
   flex: 1;
+  min-width: 0;
   font-size: 13px;
   color: #ccc;
   white-space: nowrap;
@@ -219,6 +257,7 @@ defineEmits<{
   gap: 8px;
   padding: 16px;
   border-top: 1px solid #333;
+  flex-shrink: 0;
 }
 
 .sidebar-btn {
@@ -234,6 +273,12 @@ defineEmits<{
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sidebar-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sidebar-btn:hover {
