@@ -10,6 +10,9 @@ describe('ChatSettings', () => {
     provider: '',
     model: '',
     temperature: 0.7,
+    geminiApiKey: '',
+    openaiApiKey: '',
+    anthropicApiKey: '',
   }
 
   beforeEach(() => {

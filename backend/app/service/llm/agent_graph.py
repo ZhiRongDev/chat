@@ -32,6 +32,9 @@ class ChatAgentGraph:
         model: str | None = None,
         temperature: float = 0.7,
         use_search: bool = True,
+        gemini_api_key: str | None = None,
+        openai_api_key: str | None = None,
+        anthropic_api_key: str | None = None,
     ):
         """
         Initialize the chat agent graph
@@ -41,8 +44,18 @@ class ChatAgentGraph:
             model: Specific model name
             temperature: Generation temperature
             use_search: Whether to enable search tools
+            gemini_api_key: User-provided Gemini API key
+            openai_api_key: User-provided OpenAI API key
+            anthropic_api_key: User-provided Anthropic API key
         """
-        self.llm = get_llm(provider=provider, model=model, temperature=temperature)
+        self.llm = get_llm(
+            provider=provider,
+            model=model,
+            temperature=temperature,
+            gemini_api_key=gemini_api_key,
+            openai_api_key=openai_api_key,
+            anthropic_api_key=anthropic_api_key,
+        )
         self.use_search = use_search and SearchTools.has_search_tools()
         self.search_tools = SearchTools.get_available_tools() if self.use_search else []
 

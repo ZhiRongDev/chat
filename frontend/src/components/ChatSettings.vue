@@ -83,6 +83,45 @@
       </div>
     </div>
 
+    <!-- API Keys Settings -->
+    <div class="settings-section">
+      <h5>
+        <i class="bi bi-key"></i>
+        API Keys
+      </h5>
+      <small class="text-muted mb-3 d-block">
+        Enter your API keys to use the respective LLM providers. Keys are stored locally in your browser.
+      </small>
+
+      <div class="setting-item">
+        <label for="geminiApiKey">Google Gemini API Key</label>
+        <input v-model="localSettings.geminiApiKey" type="password" class="form-control" id="geminiApiKey"
+          placeholder="Enter your Gemini API key" />
+        <small class="text-muted">
+          Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+        </small>
+      </div>
+
+      <div class="setting-item">
+        <label for="openaiApiKey">OpenAI API Key</label>
+        <input v-model="localSettings.openaiApiKey" type="password" class="form-control" id="openaiApiKey"
+          placeholder="Enter your OpenAI API key" />
+        <small class="text-muted">
+          Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+        </small>
+      </div>
+
+      <div class="setting-item">
+        <label for="anthropicApiKey">Anthropic Claude API Key</label>
+        <input v-model="localSettings.anthropicApiKey" type="password" class="form-control" id="anthropicApiKey"
+          placeholder="Enter your Anthropic API key" />
+        <small class="text-muted">
+          Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic
+            Console</a>
+        </small>
+      </div>
+    </div>
+
     <!-- Document Library -->
     <div class="settings-section">
       <div class="section-header">
@@ -209,12 +248,12 @@
     <!-- Save Button -->
     <div class="settings-actions">
       <button class="btn btn-primary" @click="saveSettings">
-        <i class="bi bi-check-lg"></i>
-        Save Settings
+        <i class="bi bi-check-lg me-1"></i>
+        <span>Save Settings</span>
       </button>
       <button class="btn btn-secondary" @click="resetSettings">
-        <i class="bi bi-arrow-clockwise"></i>
-        Reset to Defaults
+        <i class="bi bi-arrow-clockwise me-1"></i>
+        <span>Reset to Defaults</span>
       </button>
     </div>
   </div>
@@ -222,6 +261,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { appendAlert } from '@/utils/alert'
 
 export interface ChatSettings {
   useRag: boolean
@@ -230,6 +270,9 @@ export interface ChatSettings {
   provider: string
   model: string
   temperature: number
+  geminiApiKey: string
+  openaiApiKey: string
+  anthropicApiKey: string
 }
 
 const props = defineProps<{
@@ -251,6 +294,8 @@ const saveSettings = () => {
   emit('update:modelValue', { ...localSettings.value })
   // Save to localStorage for persistence
   localStorage.setItem('chatSettings', JSON.stringify(localSettings.value))
+  // Show success alert
+  appendAlert('Settings saved successfully!', 'success')
 }
 
 const resetSettings = () => {
@@ -261,6 +306,9 @@ const resetSettings = () => {
     provider: '',
     model: '',
     temperature: 0.7,
+    geminiApiKey: '',
+    openaiApiKey: '',
+    anthropicApiKey: '',
   }
   localSettings.value = { ...defaults }
   saveSettings()

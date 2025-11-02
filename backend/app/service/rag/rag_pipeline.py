@@ -31,6 +31,9 @@ class RAGPipeline:
         llm_temperature: float = 0.7,
         top_k: int = 5,
         min_score: float = 0.3,
+        gemini_api_key: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        anthropic_api_key: Optional[str] = None,
     ):
         """
         Initialize RAG pipeline
@@ -46,6 +49,9 @@ class RAGPipeline:
             llm_temperature: LLM temperature
             top_k: Number of documents to retrieve
             min_score: Minimum relevance score
+            gemini_api_key: User-provided Gemini API key
+            openai_api_key: User-provided OpenAI API key
+            anthropic_api_key: User-provided Anthropic API key
         """
         # Initialize services
         self.embedding_service = embedding_service or EmbeddingService()
@@ -74,6 +80,9 @@ class RAGPipeline:
             provider=llm_provider,
             model=llm_model,
             temperature=llm_temperature,
+            gemini_api_key=gemini_api_key,
+            openai_api_key=openai_api_key,
+            anthropic_api_key=anthropic_api_key,
         )
 
         # Retrieval configuration

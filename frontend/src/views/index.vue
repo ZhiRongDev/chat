@@ -183,6 +183,9 @@ const chatSettings = ref<ChatSettingsType>({
   provider: '',
   model: '',
   temperature: 0.7,
+  geminiApiKey: '',
+  openaiApiKey: '',
+  anthropicApiKey: '',
 })
 
 const messages = ref<Message[]>([
@@ -293,6 +296,17 @@ const sendMessage = async () => {
     }
     if (chatSettings.value.temperature !== 0.7) {
       payload.temperature = chatSettings.value.temperature
+    }
+
+    // Add API keys if provided
+    if (chatSettings.value.geminiApiKey) {
+      payload.gemini_api_key = chatSettings.value.geminiApiKey
+    }
+    if (chatSettings.value.openaiApiKey) {
+      payload.openai_api_key = chatSettings.value.openaiApiKey
+    }
+    if (chatSettings.value.anthropicApiKey) {
+      payload.anthropic_api_key = chatSettings.value.anthropicApiKey
     }
 
     const res = await fetch('http://localhost:5000/api/v1/chat', {

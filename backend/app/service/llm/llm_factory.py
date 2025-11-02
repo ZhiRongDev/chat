@@ -22,6 +22,9 @@ class LLMFactory:
         model: str | None = None,
         temperature: float = 0.7,
         streaming: bool = True,
+        gemini_api_key: str | None = None,
+        openai_api_key: str | None = None,
+        anthropic_api_key: str | None = None,
     ) -> BaseChatModel:
         """
         Create an LLM instance based on the provider
@@ -31,6 +34,9 @@ class LLMFactory:
             model: Specific model name. If None, uses provider's default
             temperature: Temperature for generation (0.0 to 1.0)
             streaming: Enable streaming responses
+            gemini_api_key: User-provided Gemini API key (overrides env var)
+            openai_api_key: User-provided OpenAI API key (overrides env var)
+            anthropic_api_key: User-provided Anthropic API key (overrides env var)
 
         Returns:
             BaseChatModel instance
@@ -41,31 +47,34 @@ class LLMFactory:
         provider = provider or settings.DEFAULT_LLM_PROVIDER
 
         if provider == "gemini":
-            if not settings.GEMINI_API_KEY:
-                raise ValueError("GEMINI_API_KEY is not configured")
+            api_key = gemini_api_key or settings.GEMINI_API_KEY
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY is not configured. Please provide an API key in settings or environment variables.")
             return ChatGoogleGenerativeAI(
                 model=model or "gemini-2.5-flash",
-                google_api_key=settings.GEMINI_API_KEY,
+                google_api_key=api_key,
                 temperature=temperature,
                 streaming=streaming,
             )
 
         elif provider == "openai":
-            if not settings.OPENAI_API_KEY:
-                raise ValueError("OPENAI_API_KEY is not configured")
+            api_key = openai_api_key or settings.OPENAI_API_KEY
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY is not configured. Please provide an API key in settings or environment variables.")
             return ChatOpenAI(
                 model=model or "gpt-4o-mini",
-                openai_api_key=settings.OPENAI_API_KEY,
+                openai_api_key=api_key,
                 temperature=temperature,
                 streaming=streaming,
             )
 
         elif provider == "anthropic":
-            if not settings.ANTHROPIC_API_KEY:
-                raise ValueError("ANTHROPIC_API_KEY is not configured")
+            api_key = anthropic_api_key or settings.ANTHROPIC_API_KEY
+            if not api_key:
+                raise ValueError("ANTHROPIC_API_KEY is not configured. Please provide an API key in settings or environment variables.")
             return ChatAnthropic(
                 model=model or "claude-3-5-sonnet-20241022",
-                anthropic_api_key=settings.ANTHROPIC_API_KEY,
+                anthropic_api_key=api_key,
                 temperature=temperature,
                 streaming=streaming,
             )
@@ -99,6 +108,9 @@ def get_llm(
     model: str | None = None,
     temperature: float = 0.7,
     streaming: bool = True,
+    gemini_api_key: str | None = None,
+    openai_api_key: str | None = None,
+    anthropic_api_key: str | None = None,
 ) -> BaseChatModel:
     """
     Convenience function to create an LLM instance
@@ -108,8 +120,14 @@ def get_llm(
         model: Specific model name
         temperature: Temperature for generation
         streaming: Enable streaming responses
+        gemini_api_key: User-provided Gemini API key
+        openai_api_key: User-provided OpenAI API key
+        anthropic_api_key: User-provided Anthropic API key
 
     Returns:
         BaseChatModel instance
     """
-    return LLMFactory.create_llm(provider, model, temperature, streaming)
+    return LLMFactory.create_llm(
+        provider, model, temperature, streaming,
+        gemini_api_key, openai_api_key, anthropic_api_key
+    )

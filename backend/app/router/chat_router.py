@@ -25,6 +25,10 @@ class ChatPayload(BaseModel):
     use_rag: bool = False  # Enable RAG mode
     top_k: int = 5  # Number of documents to retrieve for RAG
     min_score: float = 0.3  # Minimum relevance score for RAG
+    # User-provided API keys (optional, overrides env vars)
+    gemini_api_key: str | None = None
+    openai_api_key: str | None = None
+    anthropic_api_key: str | None = None
 
 
 class ChatStatusResponse(BaseModel):
@@ -96,6 +100,9 @@ async def chat_stream(payload: ChatPayload):
                 llm_temperature=payload.temperature,
                 top_k=payload.top_k,
                 min_score=payload.min_score,
+                gemini_api_key=payload.gemini_api_key,
+                openai_api_key=payload.openai_api_key,
+                anthropic_api_key=payload.anthropic_api_key,
             )
 
             async def stream_rag_messages():
@@ -118,6 +125,9 @@ async def chat_stream(payload: ChatPayload):
                 model=payload.model,
                 temperature=payload.temperature,
                 use_search=payload.use_search,
+                gemini_api_key=payload.gemini_api_key,
+                openai_api_key=payload.openai_api_key,
+                anthropic_api_key=payload.anthropic_api_key,
             )
 
             async def stream_messages():

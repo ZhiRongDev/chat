@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     REDIS_PORT: int
     REDIS_DB: int
 
-    # LLM API Keys
-    GEMINI_API_KEY: str
+    # LLM API Keys (Optional - can be provided by users via frontend)
+    GEMINI_API_KEY: str | None = None
     OPENAI_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
 
