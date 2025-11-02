@@ -54,13 +54,13 @@
       <div class="setting-item">
         <label for="provider">Provider</label>
         <select v-model="localSettings.provider" class="form-select" id="provider">
-          <option value="">Auto-detect</option>
+          <option value="">Auto-detect (uses first available API key)</option>
           <option value="gemini">Google Gemini</option>
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic Claude</option>
         </select>
         <small class="text-muted">
-          Choose your preferred LLM provider
+          Auto-detect will automatically choose a provider based on available API keys (priority: Gemini → OpenAI → Anthropic)
         </small>
       </div>
 

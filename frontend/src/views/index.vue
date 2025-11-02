@@ -175,18 +175,32 @@ const isLoggedIn = computed(() => !!userStore.user.username)
 // Bootstrap modal instance
 let bootstrapModal: Modal | null = null
 
+// Load chat settings from localStorage or use defaults
+const loadChatSettings = (): ChatSettingsType => {
+  const saved = localStorage.getItem('chatSettings')
+  if (saved) {
+    try {
+      return JSON.parse(saved)
+    } catch (e) {
+      console.error('Failed to load chat settings:', e)
+    }
+  }
+  // Return defaults if no saved settings
+  return {
+    useRag: false,
+    topK: 5,
+    minScore: 0.3,
+    provider: '',
+    model: '',
+    temperature: 0.7,
+    geminiApiKey: '',
+    openaiApiKey: '',
+    anthropicApiKey: '',
+  }
+}
+
 // Chat settings with RAG configuration
-const chatSettings = ref<ChatSettingsType>({
-  useRag: false,
-  topK: 5,
-  minScore: 0.3,
-  provider: '',
-  model: '',
-  temperature: 0.7,
-  geminiApiKey: '',
-  openaiApiKey: '',
-  anthropicApiKey: '',
-})
+const chatSettings = ref<ChatSettingsType>(loadChatSettings())
 
 const messages = ref<Message[]>([
   { id: '1', text: 'Hello! How can I help you today?', sender: 'bot' },
@@ -316,16 +330,40 @@ const sendMessage = async () => {
     })
 
     // Ensure the response body is available and the request was successful
-    if (!res.body || !res.ok) {
+    if (!res.ok) {
       loading.value = false
-      console.error('Failed to get a streaming response:', res.statusText)
+      // Try to parse error message from response
+      let errorMessage = 'Sorry, there was an error processing your request.'
+      try {
+        const errorData = await res.json()
+        if (errorData.detail) {
+          errorMessage = errorData.detail
+        }
+      } catch (e) {
+        console.error('Failed to parse error response:', e)
+        errorMessage = `Error: ${res.statusText}`
+      }
+      console.error('Failed to get a streaming response:', errorMessage)
+
       // Update bot message with error
       const botMessage = messages.value.find((msg) => msg.id === botMessageId)
       if (botMessage) {
-        botMessage.text = 'Sorry, there was an error processing your request.'
+        botMessage.text = errorMessage
       }
       await scrollToBottom()
       // Save chat even on error
+      await saveCurrentChat()
+      return
+    }
+
+    if (!res.body) {
+      loading.value = false
+      console.error('Response body is null')
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = 'Sorry, the server response was empty.'
+      }
+      await scrollToBottom()
       await saveCurrentChat()
       return
     }

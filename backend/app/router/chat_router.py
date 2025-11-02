@@ -35,6 +35,7 @@ class ChatStatusResponse(BaseModel):
     """Response model for chat status endpoint"""
 
     available_providers: list[str]
+    supported_providers: list[str]
     search_enabled: bool
     default_provider: str
 
@@ -46,9 +47,13 @@ async def get_chat_status():
 
     Returns information about which LLM providers are configured
     and whether search functionality is available.
+
+    Note: available_providers shows providers with API keys in environment.
+    supported_providers shows all providers that can be used with user-provided keys.
     """
     return ChatStatusResponse(
         available_providers=LLMFactory.get_available_providers(),
+        supported_providers=["gemini", "openai", "anthropic"],
         search_enabled=SearchTools.has_search_tools(),
         default_provider=settings.DEFAULT_LLM_PROVIDER,
     )
@@ -80,14 +85,47 @@ async def chat_stream(payload: ChatPayload):
     if not user_message:
         raise HTTPException(status_code=400, detail="Missing 'message' field")
 
-    # Validate provider if specified
-    if payload.provider:
-        available_providers = LLMFactory.get_available_providers()
-        if payload.provider not in available_providers:
+    # Auto-detect provider if not specified
+    if not payload.provider:
+        # Try to find an available provider based on API keys
+        if payload.gemini_api_key or settings.GEMINI_API_KEY:
+            payload.provider = "gemini"
+        elif payload.openai_api_key or settings.OPENAI_API_KEY:
+            payload.provider = "openai"
+        elif payload.anthropic_api_key or settings.ANTHROPIC_API_KEY:
+            payload.provider = "anthropic"
+        else:
             raise HTTPException(
                 status_code=400,
-                detail=f"Provider '{payload.provider}' is not available. "
-                f"Available providers: {', '.join(available_providers)}",
+                detail="No API key configured. Please provide an API key for at least one provider "
+                "(Gemini, OpenAI, or Anthropic) in settings or environment variables.",
+            )
+
+    # Validate provider if specified
+    if payload.provider:
+        # Check if provider is supported (regardless of env API keys)
+        supported_providers = ["gemini", "openai", "anthropic"]
+        if payload.provider not in supported_providers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Provider '{payload.provider}' is not supported. "
+                f"Supported providers: {', '.join(supported_providers)}",
+            )
+
+        # Check if API key is available (either from env or user-provided)
+        has_api_key = False
+        if payload.provider == "gemini":
+            has_api_key = bool(payload.gemini_api_key or settings.GEMINI_API_KEY)
+        elif payload.provider == "openai":
+            has_api_key = bool(payload.openai_api_key or settings.OPENAI_API_KEY)
+        elif payload.provider == "anthropic":
+            has_api_key = bool(payload.anthropic_api_key or settings.ANTHROPIC_API_KEY)
+
+        if not has_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail=f"API key for provider '{payload.provider}' is not configured. "
+                f"Please provide an API key or configure it in environment variables.",
             )
 
     try:
