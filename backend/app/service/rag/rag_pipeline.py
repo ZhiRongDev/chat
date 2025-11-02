@@ -54,7 +54,10 @@ class RAGPipeline:
             anthropic_api_key: User-provided Anthropic API key
         """
         # Initialize services
-        self.embedding_service = embedding_service or EmbeddingService()
+        self.embedding_service = embedding_service or EmbeddingService(
+            openai_api_key=openai_api_key,
+            gemini_api_key=gemini_api_key,
+        )
         self.query_processor = query_processor or QueryProcessor(self.embedding_service)
 
         # Vector store

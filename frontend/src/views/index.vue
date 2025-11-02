@@ -1,9 +1,8 @@
 <template>
   <div class="app-container">
     <!-- Sidebar -->
-    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId"
-      @new-chat="newChat" @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout"
-      @show-modal="showModal" />
+    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId" @new-chat="newChat"
+      @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout" @show-modal="showModal" />
 
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -65,7 +64,7 @@
 
     <!-- Bootstrap Modal -->
     <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
-      data-bs-backdrop="static" data-bs-keyboard="false">
+      data-bs-keyboard="false">
       <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
         <div class="modal-content">
           <div class="modal-header">

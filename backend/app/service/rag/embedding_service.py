@@ -38,6 +38,8 @@ class EmbeddingService:
         self,
         provider: Optional[EmbeddingProvider] = None,
         model: Optional[str] = None,
+        openai_api_key: Optional[str] = None,
+        gemini_api_key: Optional[str] = None,
     ):
         """
         Initialize embedding service
@@ -45,17 +47,20 @@ class EmbeddingService:
         Args:
             provider: Embedding provider (openai, google)
             model: Specific model name (uses default if not specified)
+            openai_api_key: User-provided OpenAI API key (overrides env var)
+            gemini_api_key: User-provided Gemini API key (overrides env var)
         """
+        self.openai_api_key = openai_api_key
+        self.gemini_api_key = gemini_api_key
         self.provider = provider or self._get_default_provider()
         self.model = model or self.DEFAULT_MODELS[self.provider]
         self.embeddings = self._create_embeddings()
 
-    @staticmethod
-    def _get_default_provider() -> EmbeddingProvider:
+    def _get_default_provider(self) -> EmbeddingProvider:
         """Determine default provider based on available API keys"""
-        if settings.OPENAI_API_KEY:
+        if self.openai_api_key or settings.OPENAI_API_KEY:
             return "openai"
-        elif settings.GEMINI_API_KEY:
+        elif self.gemini_api_key or settings.GEMINI_API_KEY:
             return "google"
         else:
             raise ValueError("No embedding provider API key found")
@@ -63,18 +68,20 @@ class EmbeddingService:
     def _create_embeddings(self) -> Embeddings:
         """Create embeddings instance based on provider"""
         if self.provider == "openai":
-            if not settings.OPENAI_API_KEY:
+            api_key = self.openai_api_key or settings.OPENAI_API_KEY
+            if not api_key:
                 raise ValueError("OPENAI_API_KEY not configured")
             return OpenAIEmbeddings(
                 model=self.model,
-                api_key=settings.OPENAI_API_KEY,
+                api_key=api_key,
             )
         elif self.provider == "google":
-            if not settings.GEMINI_API_KEY:
+            api_key = self.gemini_api_key or settings.GEMINI_API_KEY
+            if not api_key:
                 raise ValueError("GEMINI_API_KEY not configured")
             return GoogleGenerativeAIEmbeddings(
                 model=self.model,
-                google_api_key=settings.GEMINI_API_KEY,
+                google_api_key=api_key,
             )
         else:
             raise ValueError(f"Unsupported embedding provider: {self.provider}")
