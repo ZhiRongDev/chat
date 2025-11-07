@@ -9,6 +9,7 @@ help:
 	@echo "Available commands:"
 	@echo "  make test         - Test Docker setup and configuration"
 	@echo "  make dev          - Start development environment with hot-reload"
+	@echo "  make start        - Start services without rebuilding images"
 	@echo "  make prod         - Deploy production environment"
 	@echo "  make logs ENV=dev - View logs (ENV=dev or prod, default: dev)"
 	@echo "  make health       - Run health checks"
@@ -26,6 +27,13 @@ test:
 # Development environment
 dev:
 	@./scripts/dev.sh
+
+# Start services without rebuilding
+start:
+	@echo "🚀 Starting services without rebuilding..."
+	@docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+	@echo "✅ Services started"
+	@echo "💡 Run 'make logs' to view logs"
 
 # Production environment
 prod:
