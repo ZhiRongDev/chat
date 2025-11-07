@@ -89,6 +89,11 @@
                   <input v-model="loginForm.password" type="password" class="form-control" id="login-password"
                     placeholder="Enter your password" required :disabled="formLoading" />
                 </div>
+                <div class="mb-3 text-end">
+                  <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordModal">
+                    Forgot Password?
+                  </a>
+                </div>
                 <div class="modal-footer border-0 px-0 pb-0">
                   <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
@@ -139,6 +144,36 @@
             </div>
           </template>
 
+          <!-- Forgot Password Form -->
+          <template v-if="modalType === 'forgot-password'">
+            <div class="modal-body">
+              <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
+                {{ errorMessage }}
+              </div>
+              <div v-if="successMessage" class="alert alert-success mb-3" role="alert">
+                {{ successMessage }}
+              </div>
+              <form @submit.prevent="handleForgotPassword">
+                <div class="mb-3">
+                  <label for="forgot-username" class="form-label">Username (Email)</label>
+                  <input v-model="forgotPasswordForm.username" type="text" class="form-control mb-2" id="forgot-username"
+                    placeholder="Enter your username/email" required :disabled="formLoading" />
+                  <div class="form-text">We'll send a password reset link to your email address.</div>
+                </div>
+                <div class="modal-footer border-0 px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                    Cancel
+                  </button>
+                  <button type="submit" class="btn btn-primary" :disabled="formLoading">
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
+                    {{ formLoading ? 'Sending...' : 'Send Reset Link' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </template>
+
           <!-- Settings -->
           <template v-if="modalType === 'settings'">
             <div class="modal-body">
@@ -162,13 +197,17 @@
 import { ref, nextTick, onMounted, computed, onUnmounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
+import { userApi } from '@/api/user'
 import Sidebar from '@/components/Sidebar.vue'
 import ChatSettings, { type ChatSettings as ChatSettingsType } from '@/components/ChatSettings.vue'
 import DocumentManager from '@/components/DocumentManager.vue'
 import { appendAlert } from '@/utils/alert'
 import { Modal } from 'bootstrap'
+import { useRoute, useRouter } from 'vue-router'
 
 const userStore = useUserStore()
+const route = useRoute()
+const router = useRouter()
 const isLoggedIn = computed(() => !!userStore.user.username)
 
 // Bootstrap modal instance
@@ -214,6 +253,7 @@ const chatHistories = ref<ChatHistoryItem[]>([])
 const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 let msgIdCounter = 2  // Temporary local counter for new messages (will be replaced with backend IDs)
 
 const loginForm = ref({
@@ -227,6 +267,10 @@ const registerForm = ref({
   confirmPassword: '',
 })
 
+const forgotPasswordForm = ref({
+  username: '',
+})
+
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
   try {
@@ -234,6 +278,18 @@ onMounted(async () => {
     const modalElement = document.getElementById('appModal')
     if (modalElement) {
       bootstrapModal = new Modal(modalElement)
+    }
+
+    // Check if we have reset token in URL query params
+    const token = route.query.token as string
+    const username = route.query.username as string
+    if (token && username) {
+      // Redirect to reset password page
+      router.push({
+        path: '/reset-password',
+        query: { token, username }
+      })
+      return
     }
 
     if (isLoggedIn.value) {
@@ -550,12 +606,30 @@ const showModal = (type: string) => {
     modalTitle.value = 'Settings'
   } else if (type === 'documents') {
     modalTitle.value = 'Document Library'
+  } else if (type === 'forgot-password') {
+    modalTitle.value = 'Forgot Password'
   }
 
   // Show Bootstrap modal
   if (bootstrapModal) {
     bootstrapModal.show()
   }
+}
+
+const showForgotPasswordModal = () => {
+  errorMessage.value = ''
+  successMessage.value = ''
+  forgotPasswordForm.value = { username: '' }
+
+  // Close current modal and show forgot password modal
+  if (bootstrapModal) {
+    bootstrapModal.hide()
+  }
+
+  // Wait a bit for the modal to close before opening new one
+  setTimeout(() => {
+    showModal('forgot-password')
+  }, 300)
 }
 
 const showDocumentManager = () => {
@@ -566,9 +640,11 @@ const showDocumentManager = () => {
 
 const closeModal = () => {
   errorMessage.value = ''
+  successMessage.value = ''
   formLoading.value = false
   loginForm.value = { username: '', password: '' }
   registerForm.value = { username: '', password: '', confirmPassword: '' }
+  forgotPasswordForm.value = { username: '' }
 
   // Hide Bootstrap modal
   if (bootstrapModal) {
@@ -649,6 +725,38 @@ const handleRegister = async () => {
       errorMessage.value = 'Username already exists'
     } else {
       errorMessage.value = 'Failed to register. Please try again.'
+    }
+  } finally {
+    formLoading.value = false
+  }
+}
+
+const handleForgotPassword = async () => {
+  if (!forgotPasswordForm.value.username) {
+    errorMessage.value = 'Please enter your username/email'
+    return
+  }
+
+  try {
+    formLoading.value = true
+    errorMessage.value = ''
+    successMessage.value = ''
+
+    const response = await userApi.forgotPassword({
+      username: forgotPasswordForm.value.username,
+    })
+
+    successMessage.value = response.message
+    appendAlert(response.message, 'success')
+
+    // Clear form
+    forgotPasswordForm.value.username = ''
+  } catch (error: any) {
+    console.error('Forgot password error:', error)
+    if (error.response?.data?.detail) {
+      errorMessage.value = error.response.data.detail
+    } else {
+      errorMessage.value = 'Failed to send reset link. Please try again.'
     }
   } finally {
     formLoading.value = false
@@ -1020,6 +1128,25 @@ const handleRegister = async () => {
   background-color: #fef2f2;
   color: #dc2626;
   border-left: 4px solid #dc2626;
+}
+
+.alert-success {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border-left: 4px solid #16a34a;
+}
+
+/* Forgot Password Link */
+.forgot-password-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.forgot-password-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 /* Modal Footer Styles */

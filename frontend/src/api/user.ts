@@ -23,6 +23,19 @@ export interface LoginResponse {
   user: UserResponse
 }
 
+export interface ForgotPasswordPayload {
+  username: string
+}
+
+export interface ResetPasswordPayload {
+  token: string
+  new_password: string
+}
+
+export interface MessageResponse {
+  message: string
+}
+
 export const userApi = {
   /**
    * Login with username and password
@@ -47,6 +60,22 @@ export const userApi = {
    */
   getCurrentUser: async (): Promise<UserResponse> => {
     const response = await api.get<UserResponse>('/user/')
+    return response.data
+  },
+
+  /**
+   * Request a password reset token
+   */
+  forgotPassword: async (payload: ForgotPasswordPayload): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>('/user/forgot-password', payload)
+    return response.data
+  },
+
+  /**
+   * Reset password using a valid reset token
+   */
+  resetPassword: async (payload: ResetPasswordPayload): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>('/user/reset-password', payload)
     return response.data
   },
 }

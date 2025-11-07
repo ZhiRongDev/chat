@@ -5,6 +5,8 @@ from app.service.user_service import UserService
 from app.auth import get_current_user, create_access_token, CreateAccessTokenPayload, verify_access_token
 from app.error import ErrorCode
 from datetime import timedelta
+from app.utils import send_reset_email
+from app.config import settings
 
 auth_router = APIRouter(
     prefix="/user", tags=["user"], dependencies=[Depends(get_current_user)]
@@ -140,10 +142,14 @@ async def forgot_password(payload: ForgotPasswordPayload):
         expires_delta=timedelta(hours=1)
     )
 
-    # TODO: In production, send this token via email instead of returning it
-    # For now, we'll return it in the response for development purposes
+    send_reset_email(
+        subject="忘記密碼",
+        to_email=payload.username,
+        reset_link=f"{settings.FRONTEND_HOST}/reset-password?token={reset_token}&username={payload.username}",
+    )
+
     return MessageResponse(
-        message=f"Password reset token (DEV ONLY - should be emailed): {reset_token}"
+        message="Password reset token has been sent to your email."
     )
 
 
