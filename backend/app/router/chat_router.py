@@ -1,14 +1,17 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_serializer
 from typing import Literal, Optional
 from app.config import settings
 from app.service.llm import ChatAgentGraph, LLMFactory, SearchTools
 from app.service.chat_service import ChatService
-from app.service.rag import RAGPipeline
+from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
-from app.auth import get_current_user
+from app.model import engine
+from app.auth import get_current_user, verify_access_token
+from app.service.user_service import UserService
+from sqlmodel import Session
 import asyncio
 
 
@@ -22,9 +25,8 @@ class ChatPayload(BaseModel):
     model: str | None = None
     temperature: float = 0.7
     use_search: bool = True
-    use_rag: bool = False  # Enable RAG mode
-    top_k: int = 5  # Number of documents to retrieve for RAG
-    min_score: float = 0.3  # Minimum relevance score for RAG
+    use_rag: bool = False  # Enable RAG mode with Gemini File Search
+    max_output_tokens: int = 2048  # Max tokens for RAG response
     # User-provided API keys (optional, overrides env vars)
     gemini_api_key: str | None = None
     openai_api_key: str | None = None
@@ -60,19 +62,56 @@ async def get_chat_status():
 
 
 @nonauth_router.post("/")
-async def chat_stream(payload: ChatPayload):
+async def chat_stream(
+    payload: ChatPayload,
+    authorization: Optional[str] = Header(None)
+):
     """
-    Enhanced chat endpoint with multi-LLM support, optional search, and RAG
+    Chat endpoint with optional authentication
 
     Features:
     - Multiple LLM providers (Gemini, OpenAI, Anthropic)
-    - LangGraph-based reasoning workflow (when use_search=True, use_rag=False)
-    - RAG mode with document retrieval (when use_rag=True)
+    - LangGraph-based reasoning workflow
+    - Gemini File Search RAG mode (when use_rag=True)
+      - Uses personal document store if authenticated
+      - Uses global document store if not authenticated
     - Optional Google Search integration via Serper or Tavily
     - Streaming responses
 
     Args:
         payload: Chat payload with message and optional configuration
+        authorization: Optional Authorization header (for personal RAG store)
+
+    Returns:
+        StreamingResponse with text/plain content
+
+    Raises:
+        HTTPException: If message is missing or provider is not available
+    """
+    # Try to get user from Authorization header if present
+    current_user = None
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            token = authorization.replace("Bearer ", "")
+            token_data = verify_access_token(token)  # Returns dict with 'sub', 'reset', 'exp'
+            username = token_data.get("sub") if isinstance(token_data, dict) else None
+            if username:
+                user_service = UserService()
+                current_user = user_service.get_user_by_username(username)
+        except Exception:
+            # If token is invalid, just treat as non-authenticated
+            pass
+
+    return await _chat_stream_internal(payload, current_user=current_user)
+
+
+async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[User] = None):
+    """
+    Internal chat stream handler used by both authenticated and non-authenticated endpoints
+
+    Args:
+        payload: Chat payload with message and optional configuration
+        current_user: Authenticated user (None if not authenticated)
 
     Returns:
         StreamingResponse with text/plain content
@@ -131,30 +170,81 @@ async def chat_stream(payload: ChatPayload):
     try:
         # Choose between RAG mode and standard agent mode
         if payload.use_rag:
-            # RAG Pipeline mode
-            rag_pipeline = RAGPipeline(
-                llm_provider=payload.provider,
-                llm_model=payload.model,
-                llm_temperature=payload.temperature,
-                top_k=payload.top_k,
-                min_score=payload.min_score,
-                gemini_api_key=payload.gemini_api_key,
-                openai_api_key=payload.openai_api_key,
-                anthropic_api_key=payload.anthropic_api_key,
-            )
+            # Gemini File Search RAG mode - only supports Gemini provider
+            if payload.provider and payload.provider != "gemini":
+                raise HTTPException(
+                    status_code=400,
+                    detail="RAG mode currently only supports Gemini provider. Please use provider='gemini' or omit provider parameter.",
+                )
 
-            async def stream_rag_messages():
-                """Stream RAG response"""
-                try:
-                    async for chunk in rag_pipeline.astream(user_message):
-                        await asyncio.sleep(0)
-                        yield chunk.encode("utf-8")
+            # Force Gemini provider for RAG
+            if not payload.provider:
+                payload.provider = "gemini"
 
-                except Exception as e:
-                    error_msg = f"Error during RAG generation: {str(e)}"
-                    yield error_msg.encode("utf-8")
+            # Check Gemini API key
+            if not (payload.gemini_api_key or settings.GEMINI_API_KEY):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Gemini API key required for RAG mode. Please provide via gemini_api_key or configure in environment.",
+                )
 
-            return StreamingResponse(stream_rag_messages(), media_type="text/plain")
+            gemini_service = GeminiFileSearchService()
+
+            # Get File Search Store (user's store if authenticated, global store if not)
+            with Session(engine) as session:
+                if current_user:
+                    # Use user's personal store
+                    store = gemini_service.get_or_create_user_store(session, current_user.id)
+                else:
+                    # Use global store for non-authenticated users
+                    store = gemini_service.get_or_create_global_store(session)
+
+                # Check if store has any documents
+                if store.document_count == 0:
+                    if current_user:
+                        detail_msg = "No documents found in your knowledge base. Please upload documents first using the Settings menu."
+                    else:
+                        detail_msg = "RAG mode is enabled but no documents are available in the shared knowledge base. Please log in to upload documents or disable RAG mode to continue."
+                    raise HTTPException(
+                        status_code=400,
+                        detail=detail_msg,
+                    )
+
+                # Use the model from settings if not provided
+                rag_model = payload.model or settings.GEMINI_FILE_SEARCH_MODEL
+
+                async def stream_rag_messages():
+                    """Stream RAG response from Gemini File Search"""
+                    try:
+                        # Query Gemini File Search (synchronous call, but we'll wrap it)
+                        result = gemini_service.query_with_file_search(
+                            query=user_message,
+                            store_name=store.store_name,
+                            model=rag_model,
+                            temperature=payload.temperature,
+                            max_output_tokens=payload.max_output_tokens
+                        )
+
+                        # Stream the content back
+                        content = result['content']
+
+                        # Stream character by character for smooth UX
+                        for char in content:
+                            await asyncio.sleep(0.01)  # Small delay for streaming effect
+                            yield char.encode("utf-8")
+
+                        # Optionally append citation info if available
+                        if result.get('grounding_metadata'):
+                            citations_msg = "\n\n[Sources: Retrieved from your documents]"
+                            for char in citations_msg:
+                                await asyncio.sleep(0.01)
+                                yield char.encode("utf-8")
+
+                    except Exception as e:
+                        error_msg = f"Error during RAG generation: {str(e)}"
+                        yield error_msg.encode("utf-8")
+
+                return StreamingResponse(stream_rag_messages(), media_type="text/plain")
 
         else:
             # Standard agent mode with optional search

@@ -22,7 +22,8 @@
         <div class="messages-wrapper">
           <div v-for="(msg, index) in messages" :key="msg.id || index" class="message-group" :class="msg.sender">
             <div class="message-bubble">
-              {{ msg.text }}
+              <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
+              <span v-else>{{ msg.text }}</span>
             </div>
           </div>
 
@@ -46,7 +47,7 @@
               d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
             </path>
           </svg>
-          RAG Mode Active (Top-{{ chatSettings.topK }})
+          Gemini File Search RAG Active
         </div>
         <div class="input-wrapper">
           <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
@@ -75,7 +76,7 @@
           <!-- Login Form -->
           <template v-if="modalType === 'login'">
             <div class="modal-body">
-              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+              <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
                 {{ errorMessage }}
               </div>
               <form @submit.prevent="handleLogin">
@@ -111,7 +112,7 @@
           <!-- Register Form -->
           <template v-if="modalType === 'register'">
             <div class="modal-body">
-              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+              <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
                 {{ errorMessage }}
               </div>
               <form @submit.prevent="handleRegister">
@@ -194,13 +195,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, computed, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
 import { userApi } from '@/api/user'
 import Sidebar from '@/components/Sidebar.vue'
 import ChatSettings, { type ChatSettings as ChatSettingsType } from '@/components/ChatSettings.vue'
 import DocumentManager from '@/components/DocumentManager.vue'
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { appendAlert } from '@/utils/alert'
 import { Modal } from 'bootstrap'
 import { useRoute, useRouter } from 'vue-router'
@@ -226,8 +228,7 @@ const loadChatSettings = (): ChatSettingsType => {
   // Return defaults if no saved settings
   return {
     useRag: false,
-    topK: 5,
-    minScore: 0.3,
+    maxOutputTokens: 2048,
     provider: '',
     model: '',
     temperature: 0.7,
@@ -239,6 +240,15 @@ const loadChatSettings = (): ChatSettingsType => {
 
 // Chat settings with RAG configuration
 const chatSettings = ref<ChatSettingsType>(loadChatSettings())
+
+// Watch for login state changes - disable RAG if user logs out
+watch(isLoggedIn, (newValue) => {
+  if (!newValue && chatSettings.value.useRag) {
+    // User logged out while RAG was enabled, disable it
+    chatSettings.value.useRag = false
+    localStorage.setItem('chatSettings', JSON.stringify(chatSettings.value))
+  }
+})
 
 const messages = ref<Message[]>([
   { id: '1', text: 'Hello! How can I help you today?', sender: 'bot' },
@@ -349,11 +359,22 @@ const sendMessage = async () => {
       message: userMessageText,
     }
 
-    // Add RAG parameters if enabled
+    // Add RAG parameters if enabled (only if user is logged in)
     if (chatSettings.value.useRag) {
-      payload.use_rag = true
-      payload.top_k = chatSettings.value.topK
-      payload.min_score = chatSettings.value.minScore
+      if (!isLoggedIn.value) {
+        // User is not logged in, disable RAG for this request and show warning
+        console.warn('RAG mode requires authentication. Sending request without RAG.')
+        // Update bot message with warning
+        const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+        if (botMessage) {
+          botMessage.text = 'RAG mode requires authentication. Please log in to use document search. Continuing without RAG...\n\n'
+        }
+        // Don't add RAG parameters
+      } else {
+        // User is logged in, add RAG parameters
+        payload.use_rag = true
+        payload.max_output_tokens = chatSettings.value.maxOutputTokens
+      }
     }
 
     // Add LLM provider settings if specified
@@ -378,9 +399,20 @@ const sendMessage = async () => {
       payload.anthropic_api_key = chatSettings.value.anthropicApiKey
     }
 
+    // Build headers
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    // Add authorization token if user is logged in (for personal RAG store)
+    const token = localStorage.getItem('token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const res = await fetch('http://localhost:5000/api/v1/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     })
 
@@ -855,7 +887,7 @@ const handleForgotPassword = async () => {
 }
 
 .message-bubble {
-  max-width: 500px;
+  max-width: 600px;
   padding: 12px 16px;
   border-radius: 8px;
   font-size: 15px;
@@ -864,8 +896,9 @@ const handleForgotPassword = async () => {
 }
 
 .message-group.bot .message-bubble {
-  background-color: #f0f0f0;
+  background-color: #f9fafb;
   color: #000;
+  border: 1px solid #e5e7eb;
 }
 
 .message-group.user .message-bubble {

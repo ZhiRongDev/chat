@@ -1,18 +1,23 @@
 """
-Document Router for RAG System
-Handles document upload, management, and retrieval endpoints
+Document Router for Gemini File Search RAG System
+Handles document upload, management, and retrieval using Gemini File Search API
 """
 
+import os
+import tempfile
+import requests
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.auth import get_current_user
 from app.model.user_model import User
-from app.model.document_model import Document, DocumentChunk
+from app.model.document_model import Document, GeminiFileSearchStore
 from app.model import engine
-from app.service.rag import DocumentIngestionService, RAGPipeline
+from app.service.gemini_file_search_service import GeminiFileSearchService
+from app.config import settings
 
 
 # Routers
@@ -27,8 +32,8 @@ class DocumentUploadResponse(BaseModel):
     filename: str
     file_type: str
     file_size: int
-    chunk_count: int
     status: str
+    gemini_file_id: Optional[str] = None
 
 
 class TextIngestionRequest(BaseModel):
@@ -50,33 +55,43 @@ class DocumentListResponse(BaseModel):
     filename: str
     file_type: str
     file_size: int
-    chunk_count: int
     status: str
+    gemini_file_id: Optional[str]
     created_at: int
     updated_at: int
 
 
 class DocumentDetailResponse(BaseModel):
-    """Response for document detail with chunks"""
+    """Response for document detail"""
     id: str
     filename: str
     file_type: str
     file_size: int
-    chunk_count: int
     status: str
     error_message: Optional[str]
     metadata: Optional[dict]
+    gemini_file_id: Optional[str]
+    gemini_store_id: Optional[str]
+    gemini_metadata: Optional[dict]
     created_at: int
     updated_at: int
-    chunks: Optional[List[dict]] = None
 
 
 class DocumentStatsResponse(BaseModel):
     """Response for document statistics"""
     total_documents: int
-    total_chunks: int
     total_size_bytes: int
     documents_by_type: dict
+
+
+class StoreInfoResponse(BaseModel):
+    """Response for File Search Store information"""
+    id: str
+    display_name: str
+    description: Optional[str]
+    document_count: int
+    total_size_bytes: int
+    created_at: int
 
 
 # ============================================================================
@@ -90,9 +105,9 @@ async def upload_document(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Upload and ingest a document file
+    Upload and ingest a document file to Gemini File Search
 
-    Supported formats: PDF, TXT, MD
+    Supported formats: PDF, TXT, MD, DOCX, and more (see Gemini docs)
 
     Args:
         file: Document file to upload
@@ -107,40 +122,55 @@ async def upload_document(
             detail="Filename is required",
         )
 
-    # Check file size (e.g., 10MB limit)
-    max_size = 10 * 1024 * 1024  # 10MB
+    # Check file size
+    max_size = settings.GEMINI_MAX_FILE_SIZE_MB * 1024 * 1024
     file_content = await file.read()
     if len(file_content) > max_size:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File size exceeds {max_size} bytes",
+            detail=f"File size exceeds {settings.GEMINI_MAX_FILE_SIZE_MB}MB limit",
         )
 
-    # Reset file pointer
-    await file.seek(0)
+    # Create temporary file
+    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp_file:
+        tmp_file.write(file_content)
+        tmp_file_path = tmp_file.name
 
     try:
-        ingestion_service = DocumentIngestionService()
-        document = ingestion_service.ingest_file(
-            file=file.file,
-            filename=file.filename,
-            user_id=current_user.id,
-        )
+        gemini_service = GeminiFileSearchService()
 
-        return DocumentUploadResponse(
-            id=str(document.id),
-            filename=document.filename,
-            file_type=document.file_type,
-            file_size=document.file_size,
-            chunk_count=document.chunk_count,
-            status=document.status,
-        )
+        with Session(engine) as session:
+            # Get or create user's file search store
+            store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+            # Upload to Gemini
+            document = gemini_service.upload_file_to_store(
+                db=session,
+                file_path=tmp_file_path,
+                store_id=store.id,
+                filename=file.filename,
+                user_id=current_user.id,
+                metadata={"uploaded_by": str(current_user.id)}
+            )
+
+            return DocumentUploadResponse(
+                id=str(document.id),
+                filename=document.filename,
+                file_type=document.file_type,
+                file_size=document.file_size,
+                status=document.status,
+                gemini_file_id=document.gemini_file_id,
+            )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process document: {str(e)}",
+            detail=f"Failed to upload document: {str(e)}",
         )
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
 
 
 @auth_router.post("/ingest/text", response_model=DocumentUploadResponse)
@@ -149,7 +179,7 @@ async def ingest_text(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Ingest text content directly
+    Ingest text content directly by creating a temporary file
 
     Args:
         request: Text ingestion request
@@ -158,29 +188,50 @@ async def ingest_text(
     Returns:
         Document upload response
     """
-    try:
-        ingestion_service = DocumentIngestionService()
-        document = ingestion_service.ingest_text(
-            text=request.content,
-            title=request.title,
-            user_id=current_user.id,
-            metadata=request.metadata,
-        )
+    # Create temporary file with text content
+    filename = f"{request.title}.txt"
+    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp_file:
+        tmp_file.write(request.content)
+        tmp_file_path = tmp_file.name
 
-        return DocumentUploadResponse(
-            id=str(document.id),
-            filename=document.filename,
-            file_type=document.file_type,
-            file_size=document.file_size,
-            chunk_count=document.chunk_count,
-            status=document.status,
-        )
+    try:
+        gemini_service = GeminiFileSearchService()
+
+        with Session(engine) as session:
+            # Get or create user's file search store
+            store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+            # Upload to Gemini
+            metadata = request.metadata or {}
+            metadata.update({"type": "text_ingestion", "uploaded_by": str(current_user.id)})
+
+            document = gemini_service.upload_file_to_store(
+                db=session,
+                file_path=tmp_file_path,
+                store_id=store.id,
+                filename=filename,
+                user_id=current_user.id,
+                metadata=metadata
+            )
+
+            return DocumentUploadResponse(
+                id=str(document.id),
+                filename=document.filename,
+                file_type=document.file_type,
+                file_size=document.file_size,
+                status=document.status,
+                gemini_file_id=document.gemini_file_id,
+            )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to ingest text: {str(e)}",
         )
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
 
 
 @auth_router.post("/ingest/url", response_model=DocumentUploadResponse)
@@ -189,7 +240,7 @@ async def ingest_url(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Ingest content from a URL
+    Ingest content from a URL by downloading and uploading to Gemini
 
     Args:
         request: URL ingestion request
@@ -199,27 +250,69 @@ async def ingest_url(
         Document upload response
     """
     try:
-        ingestion_service = DocumentIngestionService()
-        document = ingestion_service.ingest_url(
-            url=str(request.url),
-            user_id=current_user.id,
-            metadata=request.metadata,
+        # Download content from URL
+        response = requests.get(str(request.url), timeout=30)
+        response.raise_for_status()
+
+        # Determine filename from URL
+        url_path = Path(str(request.url))
+        filename = url_path.name or "downloaded_content.txt"
+
+        # Create temporary file
+        suffix = url_path.suffix or '.txt'
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
+            tmp_file.write(response.content)
+            tmp_file_path = tmp_file.name
+
+    except requests.RequestException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to download from URL: {str(e)}",
         )
 
-        return DocumentUploadResponse(
-            id=str(document.id),
-            filename=document.filename,
-            file_type=document.file_type,
-            file_size=document.file_size,
-            chunk_count=document.chunk_count,
-            status=document.status,
-        )
+    try:
+        gemini_service = GeminiFileSearchService()
+
+        with Session(engine) as session:
+            # Get or create user's file search store
+            store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+            # Upload to Gemini
+            metadata = request.metadata or {}
+            metadata.update({
+                "type": "url_ingestion",
+                "uploaded_by": str(current_user.id),
+                "source_url": str(request.url)
+            })
+
+            document = gemini_service.upload_file_to_store(
+                db=session,
+                file_path=tmp_file_path,
+                store_id=store.id,
+                filename=filename,
+                user_id=current_user.id,
+                metadata=metadata,
+                source_url=str(request.url)
+            )
+
+            return DocumentUploadResponse(
+                id=str(document.id),
+                filename=document.filename,
+                file_type=document.file_type,
+                file_size=document.file_size,
+                status=document.status,
+                gemini_file_id=document.gemini_file_id,
+            )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to ingest URL: {str(e)}",
         )
+    finally:
+        # Clean up temporary file
+        if os.path.exists(tmp_file_path):
+            os.unlink(tmp_file_path)
 
 
 # ============================================================================
@@ -244,16 +337,16 @@ async def list_documents(
     Returns:
         List of documents
     """
-    with Session(engine) as session:
-        statement = (
-            select(Document)
-            .where(Document.user_id == current_user.id)
-            .offset(offset)
-            .limit(limit)
-            .order_by(Document.created_at.desc())
-        )
+    # Don't require Gemini API key for listing documents (DB-only operation)
+    gemini_service = GeminiFileSearchService(require_api_key=False)
 
-        documents = session.exec(statement).all()
+    with Session(engine) as session:
+        documents = gemini_service.list_documents(
+            db=session,
+            user_id=current_user.id,
+            limit=limit,
+            offset=offset
+        )
 
         return [
             DocumentListResponse(
@@ -261,8 +354,8 @@ async def list_documents(
                 filename=doc.filename,
                 file_type=doc.file_type,
                 file_size=doc.file_size,
-                chunk_count=doc.chunk_count,
                 status=doc.status,
+                gemini_file_id=doc.gemini_file_id,
                 created_at=doc.created_at,
                 updated_at=doc.updated_at,
             )
@@ -274,7 +367,6 @@ async def list_documents(
 async def get_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
-    include_chunks: bool = False,
 ):
     """
     Get document details
@@ -282,7 +374,6 @@ async def get_document(
     Args:
         document_id: Document ID
         current_user: Authenticated user
-        include_chunks: Whether to include chunk content
 
     Returns:
         Document details
@@ -304,36 +395,19 @@ async def get_document(
                 detail="Document not found",
             )
 
-        chunks_data = None
-        if include_chunks:
-            chunks = session.exec(
-                select(DocumentChunk)
-                .where(DocumentChunk.document_id == doc_id_int)
-                .order_by(DocumentChunk.chunk_index)
-            ).all()
-
-            chunks_data = [
-                {
-                    "id": str(chunk.id),
-                    "chunk_index": chunk.chunk_index,
-                    "content": chunk.content[:200] + "..." if len(chunk.content) > 200 else chunk.content,
-                    "token_count": chunk.token_count,
-                }
-                for chunk in chunks
-            ]
-
         return DocumentDetailResponse(
             id=str(document.id),
             filename=document.filename,
             file_type=document.file_type,
             file_size=document.file_size,
-            chunk_count=document.chunk_count,
             status=document.status,
             error_message=document.error_message,
             metadata=document.extra_metadata,
+            gemini_file_id=document.gemini_file_id,
+            gemini_store_id=document.gemini_store_id,
+            gemini_metadata=document.gemini_metadata,
             created_at=document.created_at,
             updated_at=document.updated_at,
-            chunks=chunks_data,
         )
 
 
@@ -343,7 +417,7 @@ async def delete_document(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Delete a document and all its chunks
+    Delete a document from Gemini File Search and database
 
     Args:
         document_id: Document ID
@@ -360,8 +434,10 @@ async def delete_document(
             detail="Invalid document_id format",
         )
 
-    # Verify ownership
+    gemini_service = GeminiFileSearchService()
+
     with Session(engine) as session:
+        # Verify ownership
         document = session.get(Document, doc_id_int)
 
         if not document or document.user_id != current_user.id:
@@ -370,24 +446,27 @@ async def delete_document(
                 detail="Document not found",
             )
 
-    # Delete using ingestion service
-    try:
-        ingestion_service = DocumentIngestionService()
-        deleted = ingestion_service.delete_document(doc_id_int)
-
-        if not deleted:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Document not found",
+        # Delete document
+        try:
+            deleted = gemini_service.delete_document(
+                db=session,
+                document_id=doc_id_int,
+                delete_from_gemini=True
             )
 
-        return {"detail": "Document deleted successfully"}
+            if not deleted:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Document not found",
+                )
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete document: {str(e)}",
-        )
+            return {"detail": "Document deleted successfully"}
+
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete document: {str(e)}",
+            )
 
 
 @auth_router.get("/stats/overview", response_model=DocumentStatsResponse)
@@ -403,13 +482,16 @@ async def get_document_stats(
     Returns:
         Document statistics
     """
+    gemini_service = GeminiFileSearchService()
+
     with Session(engine) as session:
-        documents = session.exec(
-            select(Document).where(Document.user_id == current_user.id)
-        ).all()
+        documents = gemini_service.list_documents(
+            db=session,
+            user_id=current_user.id,
+            limit=10000  # Get all for stats
+        )
 
         total_documents = len(documents)
-        total_chunks = sum(doc.chunk_count for doc in documents)
         total_size = sum(doc.file_size for doc in documents)
 
         # Count by type
@@ -419,7 +501,39 @@ async def get_document_stats(
 
         return DocumentStatsResponse(
             total_documents=total_documents,
-            total_chunks=total_chunks,
             total_size_bytes=total_size,
             documents_by_type=type_counts,
+        )
+
+
+# ============================================================================
+# File Search Store Management (Authenticated)
+# ============================================================================
+
+
+@auth_router.get("/stores/info", response_model=StoreInfoResponse)
+async def get_user_store_info(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get information about user's File Search Store
+
+    Args:
+        current_user: Authenticated user
+
+    Returns:
+        Store information
+    """
+    gemini_service = GeminiFileSearchService()
+
+    with Session(engine) as session:
+        store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        return StoreInfoResponse(
+            id=str(store.id),
+            display_name=store.display_name,
+            description=store.description,
+            document_count=store.document_count,
+            total_size_bytes=store.total_size_bytes,
+            created_at=store.created_at,
         )
