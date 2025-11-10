@@ -115,6 +115,9 @@
               <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
                 {{ errorMessage }}
               </div>
+              <div v-if="successMessage" class="alert alert-success mb-3" role="alert">
+                {{ successMessage }}
+              </div>
               <form @submit.prevent="handleRegister">
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
@@ -738,17 +741,24 @@ const handleRegister = async () => {
   try {
     formLoading.value = true
     errorMessage.value = ''
+    successMessage.value = ''
 
-    await userStore.register({
+    const response = await userApi.register({
       username: registerForm.value.username,
       password: registerForm.value.password,
     })
 
-    // Show success and auto-login
-    appendAlert(`Registration successful! Please login with your credentials.`, 'success')
-    closeModal()
-    // Switch to login modal
-    showModal('login')
+    // Show success message - user needs to verify email
+    successMessage.value = response.message
+    appendAlert(response.message, 'success')
+
+    // Clear form
+    registerForm.value = { username: '', password: '', confirmPassword: '' }
+
+    // Close modal after 3 seconds
+    setTimeout(() => {
+      closeModal()
+    }, 3000)
   } catch (error: any) {
     console.error('Registration error:', error)
     if (error.response?.data?.detail) {
