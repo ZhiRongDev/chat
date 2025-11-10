@@ -24,35 +24,50 @@ depends_on = None
 def upgrade():
     """Apply migration to upgrade to Gemini File Search"""
 
-    # Create gemini_file_search_store table
-    op.create_table(
-        'gemini_file_search_store',
-        sa.Column('id', sa.BigInteger(), nullable=False),
-        sa.Column('user_id', sa.BigInteger(), nullable=True),
-        sa.Column('store_name', sa.String(length=255), nullable=False),
-        sa.Column('display_name', sa.String(length=255), nullable=False),
-        sa.Column('description', sa.Text(), nullable=True),
-        sa.Column('document_count', sa.Integer(), nullable=False, server_default='0'),
-        sa.Column('total_size_bytes', sa.BigInteger(), nullable=False, server_default='0'),
-        sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
-        sa.Column('created_at', sa.BigInteger(), nullable=False),
-        sa.Column('updated_at', sa.BigInteger(), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id')
-    )
+    # Get inspector to check what exists
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    tables = inspector.get_table_names()
 
-    # Add new columns to document table
-    op.add_column('document', sa.Column('gemini_file_id', sa.String(length=255), nullable=True))
-    op.add_column('document', sa.Column('gemini_store_id', sa.String(length=255), nullable=True))
-    op.add_column('document', sa.Column('gemini_mime_type', sa.String(length=100), nullable=True))
-    op.add_column('document', sa.Column('gemini_metadata', postgresql.JSON(astext_type=sa.Text()), nullable=True))
+    # Create gemini_file_search_store table only if it doesn't exist
+    if 'gemini_file_search_store' not in tables:
+        op.create_table(
+            'gemini_file_search_store',
+            sa.Column('id', sa.BigInteger(), nullable=False, autoincrement=False),
+            sa.Column('user_id', sa.BigInteger(), nullable=True),
+            sa.Column('store_name', sa.String(length=255), nullable=False),
+            sa.Column('display_name', sa.String(length=255), nullable=False),
+            sa.Column('description', sa.Text(), nullable=True),
+            sa.Column('document_count', sa.Integer(), nullable=False, server_default='0'),
+            sa.Column('total_size_bytes', sa.BigInteger(), nullable=False, server_default='0'),
+            sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'),
+            sa.Column('created_at', sa.BigInteger(), nullable=False),
+            sa.Column('updated_at', sa.BigInteger(), nullable=False),
+            sa.ForeignKeyConstraint(['user_id'], ['user.id'], ondelete='CASCADE'),
+            sa.PrimaryKeyConstraint('id')
+        )
 
-    # Remove old column from document table
-    op.drop_column('document', 'chunk_count')
+    # Add new columns to document table (if they don't exist)
+    document_columns = [col['name'] for col in inspector.get_columns('document')]
 
-    # Drop old tables (in correct order due to foreign keys)
-    op.drop_table('document_chunk')
-    op.drop_table('vector_store_config')
+    if 'gemini_file_id' not in document_columns:
+        op.add_column('document', sa.Column('gemini_file_id', sa.String(length=255), nullable=True))
+    if 'gemini_store_id' not in document_columns:
+        op.add_column('document', sa.Column('gemini_store_id', sa.String(length=255), nullable=True))
+    if 'gemini_mime_type' not in document_columns:
+        op.add_column('document', sa.Column('gemini_mime_type', sa.String(length=100), nullable=True))
+    if 'gemini_metadata' not in document_columns:
+        op.add_column('document', sa.Column('gemini_metadata', postgresql.JSON(astext_type=sa.Text()), nullable=True))
+
+    # Remove old column from document table (if it exists)
+    if 'chunk_count' in document_columns:
+        op.drop_column('document', 'chunk_count')
+
+    # Drop old tables (in correct order due to foreign keys) if they exist
+    if 'document_chunk' in tables:
+        op.drop_table('document_chunk')
+    if 'vector_store_config' in tables:
+        op.drop_table('vector_store_config')
 
 
 def downgrade():
@@ -61,7 +76,7 @@ def downgrade():
     # Recreate vector_store_config table
     op.create_table(
         'vector_store_config',
-        sa.Column('id', sa.BigInteger(), nullable=False),
+        sa.Column('id', sa.BigInteger(), nullable=False, autoincrement=False),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('store_type', sa.String(length=50), nullable=False),
         sa.Column('embedding_model', sa.String(length=100), nullable=False),
@@ -80,7 +95,7 @@ def downgrade():
     # Recreate document_chunk table
     op.create_table(
         'document_chunk',
-        sa.Column('id', sa.BigInteger(), nullable=False),
+        sa.Column('id', sa.BigInteger(), nullable=False, autoincrement=False),
         sa.Column('document_id', sa.BigInteger(), nullable=False),
         sa.Column('chunk_index', sa.Integer(), nullable=False),
         sa.Column('content', sa.Text(), nullable=False),

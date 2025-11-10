@@ -30,7 +30,7 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=True
-    command: python main.py
+    command: sh -c "alembic upgrade head && python main.py"
 
   db:
     ports:

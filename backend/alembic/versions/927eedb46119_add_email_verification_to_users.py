@@ -18,8 +18,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add is_verified column to user table with default value False
-    op.add_column('user', sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'))
+    # Add is_verified column to user table with default value False (if it doesn't exist)
+    connection = op.get_bind()
+    inspector = sa.inspect(connection)
+    user_columns = [col['name'] for col in inspector.get_columns('user')]
+
+    if 'is_verified' not in user_columns:
+        op.add_column('user', sa.Column('is_verified', sa.Boolean(), nullable=False, server_default='false'))
 
 
 def downgrade() -> None:
