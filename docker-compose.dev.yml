@@ -24,18 +24,13 @@ services:
     volumes:
       # Mount source code for hot-reload
       - ./backend:/app/backend
-      # Persist data directory for vector stores
-      - ./backend/data:/app/backend/data
       # Prevent Python cache issues
       - /app/backend/.venv
       - /app/backend/__pycache__
     environment:
       - ENVIRONMENT=development
       - DEBUG=True
-      # Force CPU-only execution
-      - CUDA_VISIBLE_DEVICES=
-      - TORCH_DEVICE=cpu
-    command: python main.py
+    command: sh -c "alembic upgrade head && python main.py"
 
   db:
     ports:

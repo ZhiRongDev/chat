@@ -1,8 +1,16 @@
 <template>
   <div class="app-container">
     <!-- Sidebar -->
-    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId" @new-chat="newChat"
-      @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout" @show-modal="showModal" />
+    <Sidebar
+      :is-open="sidebarOpen"
+      :chat-histories="chatHistories"
+      :current-chat-id="currentChatId"
+      @new-chat="newChat"
+      @load-chat="loadChat"
+      @delete-chat="deleteChat"
+      @logout="handleLogout"
+      @show-modal="showModal"
+    />
 
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -10,19 +18,30 @@
       <div class="header">
         <button class="menu-btn" @click="toggleSidebar">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            ></path>
           </svg>
         </button>
-        <div class="header-title">ChatGPT</div>
+        <div class="header-title">Chat</div>
         <div class="spacer"></div>
       </div>
 
       <!-- Messages -->
       <div class="messages-container">
         <div class="messages-wrapper">
-          <div v-for="(msg, index) in messages" :key="msg.id || index" class="message-group" :class="msg.sender">
+          <div
+            v-for="(msg, index) in messages"
+            :key="msg.id || index"
+            class="message-group"
+            :class="msg.sender"
+          >
             <div class="message-bubble">
-              {{ msg.text }}
+              <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
+              <span v-else>{{ msg.text }}</span>
             </div>
           </div>
 
@@ -41,21 +60,42 @@
       <!-- Input -->
       <div class="input-area">
         <div v-if="chatSettings.useRag" class="rag-indicator">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
-            </path>
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            style="width: 16px; height: 16px"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+            ></path>
           </svg>
-          RAG Mode Active (Top-{{ chatSettings.topK }})
+          Gemini File Search RAG Active
         </div>
         <div class="input-wrapper">
-          <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
-            placeholder="Message ChatGPT..." :disabled="loading" />
-          <button @click="sendMessage" class="send-btn" :disabled="!currentMessage.trim() || loading">
+          <input
+            v-model="currentMessage"
+            @keypress.enter="sendMessage"
+            type="text"
+            class="input-field"
+            placeholder="Message ChatGPT..."
+            :disabled="loading"
+          />
+          <button
+            @click="sendMessage"
+            class="send-btn"
+            :disabled="!currentMessage.trim() || loading"
+          >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8">
-              </path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              ></path>
             </svg>
           </button>
         </div>
@@ -63,9 +103,18 @@
     </div>
 
     <!-- Bootstrap Modal -->
-    <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
-      data-bs-keyboard="false">
-      <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
+    <div
+      class="modal fade"
+      id="appModal"
+      tabindex="-1"
+      aria-labelledby="appModalLabel"
+      aria-hidden="true"
+      data-bs-keyboard="false"
+    >
+      <div
+        class="modal-dialog modal-dialog-centered"
+        :class="{ 'modal-lg': modalType === 'documents' }"
+      >
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="appModalLabel">{{ modalTitle }}</h5>
@@ -75,19 +124,76 @@
           <!-- Login Form -->
           <template v-if="modalType === 'login'">
             <div class="modal-body">
-              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+              <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
                 {{ errorMessage }}
               </div>
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="login-username" class="form-label">Username</label>
-                  <input v-model="loginForm.username" type="text" class="form-control" id="login-username"
-                    placeholder="Enter your username" required :disabled="formLoading" />
+                  <input
+                    v-model="loginForm.username"
+                    type="text"
+                    class="form-control"
+                    id="login-username"
+                    placeholder="Enter your username"
+                    required
+                    :disabled="formLoading"
+                  />
                 </div>
                 <div class="mb-3">
                   <label for="login-password" class="form-label">Password</label>
-                  <input v-model="loginForm.password" type="password" class="form-control" id="login-password"
-                    placeholder="Enter your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="loginForm.password"
+                      :type="showLoginPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="login-password"
+                      placeholder="Enter your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showLoginPassword = !showLoginPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showLoginPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="mb-3 text-end">
                   <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordModal">
@@ -95,12 +201,21 @@
                   </a>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Logging in...' : 'Login' }}
                   </button>
                 </div>
@@ -111,32 +226,151 @@
           <!-- Register Form -->
           <template v-if="modalType === 'register'">
             <div class="modal-body">
-              <div v-if="errorMessage" class="alert alert-danger" role="alert">
+              <div v-if="errorMessage" class="alert alert-danger mb-3" role="alert">
                 {{ errorMessage }}
+              </div>
+              <div v-if="successMessage" class="alert alert-success mb-3" role="alert">
+                {{ successMessage }}
               </div>
               <form @submit.prevent="handleRegister">
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
-                  <input v-model="registerForm.username" type="text" class="form-control" id="register-username"
-                    placeholder="Enter your username" required :disabled="formLoading" />
+                  <input
+                    v-model="registerForm.username"
+                    type="text"
+                    class="form-control"
+                    id="register-username"
+                    placeholder="Enter your username"
+                    required
+                    :disabled="formLoading"
+                  />
                 </div>
                 <div class="mb-3">
                   <label for="register-password" class="form-label">Password</label>
-                  <input v-model="registerForm.password" type="password" class="form-control" id="register-password"
-                    placeholder="Enter your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="registerForm.password"
+                      :type="showRegisterPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="register-password"
+                      placeholder="Enter your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showRegisterPassword = !showRegisterPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showRegisterPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-confirm" class="form-label">Confirm Password</label>
-                  <input v-model="registerForm.confirmPassword" type="password" class="form-control"
-                    id="register-confirm" placeholder="Confirm your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="registerForm.confirmPassword"
+                      :type="showRegisterConfirmPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="register-confirm"
+                      placeholder="Confirm your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showRegisterConfirmPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Registering...' : 'Register' }}
                   </button>
                 </div>
@@ -156,17 +390,35 @@
               <form @submit.prevent="handleForgotPassword">
                 <div class="mb-3">
                   <label for="forgot-username" class="form-label">Username (Email)</label>
-                  <input v-model="forgotPasswordForm.username" type="text" class="form-control mb-2" id="forgot-username"
-                    placeholder="Enter your username/email" required :disabled="formLoading" />
-                  <div class="form-text">We'll send a password reset link to your email address.</div>
+                  <input
+                    v-model="forgotPasswordForm.username"
+                    type="text"
+                    class="form-control mb-2"
+                    id="forgot-username"
+                    placeholder="Enter your username/email"
+                    required
+                    :disabled="formLoading"
+                  />
+                  <div class="form-text">
+                    We'll send a password reset link to your email address.
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Sending...' : 'Send Reset Link' }}
                   </button>
                 </div>
@@ -183,7 +435,7 @@
 
           <!-- Document Manager -->
           <template v-if="modalType === 'documents'">
-            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto">
               <DocumentManager />
             </div>
           </template>
@@ -194,13 +446,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted, computed, onUnmounted } from 'vue'
+import { ref, nextTick, onMounted, computed, onUnmounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { chatApi, type Message, type ChatHistoryItem } from '@/api/chat'
 import { userApi } from '@/api/user'
 import Sidebar from '@/components/Sidebar.vue'
 import ChatSettings, { type ChatSettings as ChatSettingsType } from '@/components/ChatSettings.vue'
 import DocumentManager from '@/components/DocumentManager.vue'
+import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { appendAlert } from '@/utils/alert'
 import { Modal } from 'bootstrap'
 import { useRoute, useRouter } from 'vue-router'
@@ -226,8 +479,7 @@ const loadChatSettings = (): ChatSettingsType => {
   // Return defaults if no saved settings
   return {
     useRag: false,
-    topK: 5,
-    minScore: 0.3,
+    maxOutputTokens: 2048,
     provider: '',
     model: '',
     temperature: 0.7,
@@ -239,6 +491,15 @@ const loadChatSettings = (): ChatSettingsType => {
 
 // Chat settings with RAG configuration
 const chatSettings = ref<ChatSettingsType>(loadChatSettings())
+
+// Watch for login state changes - disable RAG if user logs out
+watch(isLoggedIn, (newValue) => {
+  if (!newValue && chatSettings.value.useRag) {
+    // User logged out while RAG was enabled, disable it
+    chatSettings.value.useRag = false
+    localStorage.setItem('chatSettings', JSON.stringify(chatSettings.value))
+  }
+})
 
 const messages = ref<Message[]>([
   { id: '1', text: 'Hello! How can I help you today?', sender: 'bot' },
@@ -254,7 +515,7 @@ const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-let msgIdCounter = 2  // Temporary local counter for new messages (will be replaced with backend IDs)
+let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
 
 const loginForm = ref({
   username: '',
@@ -270,6 +531,11 @@ const registerForm = ref({
 const forgotPasswordForm = ref({
   username: '',
 })
+
+// Password visibility toggles
+const showLoginPassword = ref(false)
+const showRegisterPassword = ref(false)
+const showRegisterConfirmPassword = ref(false)
 
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
@@ -287,7 +553,7 @@ onMounted(async () => {
       // Redirect to reset password page
       router.push({
         path: '/reset-password',
-        query: { token, username }
+        query: { token, username },
       })
       return
     }
@@ -349,11 +615,23 @@ const sendMessage = async () => {
       message: userMessageText,
     }
 
-    // Add RAG parameters if enabled
+    // Add RAG parameters if enabled (only if user is logged in)
     if (chatSettings.value.useRag) {
-      payload.use_rag = true
-      payload.top_k = chatSettings.value.topK
-      payload.min_score = chatSettings.value.minScore
+      if (!isLoggedIn.value) {
+        // User is not logged in, disable RAG for this request and show warning
+        console.warn('RAG mode requires authentication. Sending request without RAG.')
+        // Update bot message with warning
+        const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+        if (botMessage) {
+          botMessage.text =
+            'RAG mode requires authentication. Please log in to use document search. Continuing without RAG...\n\n'
+        }
+        // Don't add RAG parameters
+      } else {
+        // User is logged in, add RAG parameters
+        payload.use_rag = true
+        payload.max_output_tokens = chatSettings.value.maxOutputTokens
+      }
     }
 
     // Add LLM provider settings if specified
@@ -378,9 +656,20 @@ const sendMessage = async () => {
       payload.anthropic_api_key = chatSettings.value.anthropicApiKey
     }
 
+    // Build headers
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+
+    // Add authorization token if user is logged in (for personal RAG store)
+    const token = localStorage.getItem('token')
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
     const res = await fetch('http://localhost:5000/api/v1/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
     })
 
@@ -503,7 +792,7 @@ const saveCurrentChat = async () => {
     const title =
       firstUserMessage && firstUserMessage.text
         ? firstUserMessage.text.trim().substring(0, 50) +
-        (firstUserMessage.text.length > 50 ? '...' : '')
+          (firstUserMessage.text.length > 50 ? '...' : '')
         : 'New Chat'
 
     const savedChat = await chatApi.saveChatHistory({
@@ -646,6 +935,11 @@ const closeModal = () => {
   registerForm.value = { username: '', password: '', confirmPassword: '' }
   forgotPasswordForm.value = { username: '' }
 
+  // Reset password visibility toggles
+  showLoginPassword.value = false
+  showRegisterPassword.value = false
+  showRegisterConfirmPassword.value = false
+
   // Hide Bootstrap modal
   if (bootstrapModal) {
     bootstrapModal.hide()
@@ -706,17 +1000,23 @@ const handleRegister = async () => {
   try {
     formLoading.value = true
     errorMessage.value = ''
+    successMessage.value = ''
 
-    await userStore.register({
+    const response = await userApi.register({
       username: registerForm.value.username,
       password: registerForm.value.password,
     })
 
-    // Show success and auto-login
-    appendAlert(`Registration successful! Please login with your credentials.`, 'success')
-    closeModal()
-    // Switch to login modal
-    showModal('login')
+    // Show success message - user needs to verify email
+    successMessage.value = response.message
+
+    // Clear form
+    registerForm.value = { username: '', password: '', confirmPassword: '' }
+
+    // Close modal after 3 seconds
+    setTimeout(() => {
+      closeModal()
+    }, 3000)
   } catch (error: any) {
     console.error('Registration error:', error)
     if (error.response?.data?.detail) {
@@ -747,7 +1047,6 @@ const handleForgotPassword = async () => {
     })
 
     successMessage.value = response.message
-    appendAlert(response.message, 'success')
 
     // Clear form
     forgotPasswordForm.value.username = ''
@@ -775,7 +1074,8 @@ const handleForgotPassword = async () => {
   display: flex;
   width: 100%;
   height: 100vh;
-  background: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
 }
 
 .main-container {
@@ -783,15 +1083,32 @@ const handleForgotPassword = async () => {
   display: flex;
   flex-direction: column;
   background: #fff;
+  border-radius: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Mobile: Sidebar overlay on small screens */
+@media (max-width: 768px) {
+  .main-container {
+    border-radius: 0;
+  }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
-  background: #fff;
+  background: linear-gradient(to right, #fff, #f9fafb);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
 }
 
 .menu-btn {
@@ -801,7 +1118,7 @@ const handleForgotPassword = async () => {
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
@@ -810,31 +1127,62 @@ const handleForgotPassword = async () => {
 
 .menu-btn:hover {
   background-color: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
 }
 
 .menu-btn svg {
   width: 24px;
   height: 24px;
-  stroke: #000;
+  stroke: #374151;
 }
 
 .header-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #000;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .header-title {
+    font-size: 18px;
+  }
 }
 
 .spacer {
   width: 40px;
 }
 
+@media (max-width: 768px) {
+  .spacer {
+    width: 0;
+  }
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 32px 24px;
+  overflow-x: hidden;
+  padding: 24px 16px;
   display: flex;
   justify-content: center;
-  background: #fff;
+  background: linear-gradient(to bottom, #f9fafb, #ffffff);
+}
+
+@media (min-width: 769px) {
+  .messages-container {
+    padding: 32px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .messages-container {
+    padding: 40px 32px;
+  }
 }
 
 .messages-wrapper {
@@ -845,9 +1193,27 @@ const handleForgotPassword = async () => {
   gap: 16px;
 }
 
+@media (min-width: 1024px) {
+  .messages-wrapper {
+    max-width: 800px;
+  }
+}
+
 .message-group {
   display: flex;
   margin-bottom: 8px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-group.user {
@@ -855,39 +1221,57 @@ const handleForgotPassword = async () => {
 }
 
 .message-bubble {
-  max-width: 500px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  max-width: 85%;
+  padding: 14px 18px;
+  border-radius: 16px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
   word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .message-bubble {
+    max-width: 90%;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+.message-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .message-group.bot .message-bubble {
-  background-color: #f0f0f0;
-  color: #000;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  color: #1f2937;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px 16px 16px 4px;
 }
 
 .message-group.user .message-bubble {
-  background-color: #2563eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  border-radius: 16px 16px 4px 16px;
 }
 
 .typing-indicator {
   display: flex;
-  gap: 4px;
-  padding: 12px 16px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 16px 16px 16px 4px;
   width: fit-content;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .typing-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #999;
-  animation: bounce 1.4s infinite;
+  background-color: #6b7280;
+  animation: bounce 1.4s infinite ease-in-out;
 }
 
 .typing-dot:nth-child(1) {
@@ -903,7 +1287,6 @@ const handleForgotPassword = async () => {
 }
 
 @keyframes bounce {
-
   0%,
   60%,
   100% {
@@ -918,25 +1301,51 @@ const handleForgotPassword = async () => {
 }
 
 .input-area {
-  padding: 16px 24px 24px;
+  padding: 16px;
   border-top: 1px solid #e5e7eb;
-  background: #fff;
+  background: linear-gradient(to top, #ffffff, #f9fafb);
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 769px) {
+  .input-area {
+    padding: 20px 24px 24px;
+  }
 }
 
 .rag-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #dbeafe;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
   color: #1e40af;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 768px) {
+  .rag-indicator {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
 }
 
 .input-wrapper {
@@ -944,57 +1353,104 @@ const handleForgotPassword = async () => {
   width: 100%;
   display: flex;
   gap: 12px;
+  align-items: flex-end;
+}
+
+@media (min-width: 1024px) {
+  .input-wrapper {
+    max-width: 800px;
+  }
 }
 
 .input-field {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 14px 18px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   font-size: 15px;
   font-family: inherit;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   resize: none;
-  max-height: 100px;
+  max-height: 120px;
+  background: #fff;
+}
+
+@media (max-width: 768px) {
+  .input-field {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+.input-field:hover:not(:disabled) {
+  border-color: #d1d5db;
 }
 
 .input-field:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.input-field:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .send-btn {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   padding: 0;
-  background-color: #2563eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+@media (max-width: 768px) {
+  .send-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .send-btn:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .send-btn:disabled {
-  background-color: #d1d5db;
+  background: #d1d5db;
   cursor: not-allowed;
   opacity: 0.5;
+  box-shadow: none;
 }
 
 .send-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   stroke: white;
   stroke-width: 2;
+}
+
+@media (max-width: 768px) {
+  .send-btn svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* Bootstrap Modal Custom Styles */
@@ -1003,8 +1459,21 @@ const handleForgotPassword = async () => {
   max-width: 500px;
 }
 
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+}
+
 .modal-dialog.modal-lg {
   max-width: 800px;
+}
+
+@media (max-width: 768px) {
+  .modal-dialog.modal-lg {
+    max-width: calc(100% - 1rem);
+  }
 }
 
 .modal-dialog-centered {
@@ -1013,36 +1482,69 @@ const handleForgotPassword = async () => {
   min-height: calc(100% - 3.5rem);
 }
 
+@media (max-width: 768px) {
+  .modal-dialog-centered {
+    min-height: calc(100% - 1rem);
+  }
+}
+
 .modal-content {
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
   width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    border-radius: 12px;
+  }
 }
 
 .modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e9ecef;
-  background-color: #fff;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(to right, #fff, #f9fafb);
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 20px 20px;
+  }
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .modal-title {
+    font-size: 18px;
+  }
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 28px;
   max-height: 70vh;
   overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+  .modal-body {
+    padding: 20px;
+    max-height: 60vh;
+  }
+}
+
 .modal-body::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .modal-body::-webkit-scrollbar-track {
@@ -1050,23 +1552,25 @@ const handleForgotPassword = async () => {
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+  border-radius: 4px;
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
 .btn-close {
   padding: 8px;
   opacity: 0.5;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  border-radius: 8px;
 }
 
 .btn-close:hover {
   opacity: 1;
   transform: scale(1.1);
+  background-color: #f3f4f6;
 }
 
 .btn-close:focus {
@@ -1078,14 +1582,22 @@ const handleForgotPassword = async () => {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Form Input Styles - Modern Dark Theme */
+/* Form Input Styles - Modern Theme */
 .form-control {
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 15px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   transition: all 0.2s ease;
   background-color: #fff;
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .form-control {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
 }
 
 .form-control:hover:not(:disabled) {
@@ -1093,10 +1605,10 @@ const handleForgotPassword = async () => {
 }
 
 .form-control:focus {
-  border-color: #111827;
+  border-color: #667eea;
   background-color: #fff;
-  outline: 2px solid #111827;
-  outline-offset: -1px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .form-control:disabled {
@@ -1110,42 +1622,77 @@ const handleForgotPassword = async () => {
 }
 
 .form-label {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
   color: #374151;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .form-label {
+    font-size: 13px;
+  }
+}
+
+.form-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+  .form-text {
+    font-size: 12px;
+  }
 }
 
 /* Alert Styles */
 .alert {
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .alert {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 }
 
 .alert-danger {
-  background-color: #fef2f2;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #dc2626;
   border-left: 4px solid #dc2626;
 }
 
 .alert-success {
-  background-color: #f0fdf4;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border-left: 4px solid #16a34a;
 }
 
 /* Forgot Password Link */
 .forgot-password-link {
-  color: #2563eb;
+  color: #667eea;
   text-decoration: none;
   font-size: 14px;
-  transition: color 0.2s ease;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .forgot-password-link {
+    font-size: 13px;
+  }
 }
 
 .forgot-password-link:hover {
-  color: #1d4ed8;
+  color: #764ba2;
   text-decoration: underline;
 }
 
@@ -1154,15 +1701,22 @@ const handleForgotPassword = async () => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  padding-top: 20px;
+  padding-top: 24px;
 }
 
-/* Button Styles - Modern Dark Theme */
+@media (max-width: 768px) {
+  .modal-footer {
+    padding-top: 20px;
+    gap: 10px;
+  }
+}
+
+/* Button Styles - Modern Theme */
 .btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   font-size: 15px;
-  font-weight: 500;
-  border-radius: 8px;
+  font-weight: 600;
+  border-radius: 12px;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -1170,62 +1724,76 @@ const handleForgotPassword = async () => {
   border: none;
   cursor: pointer;
   line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
 }
 
 .btn-primary {
-  background-color: #111827;
-  border: 1px solid #111827;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #000;
-  border-color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   color: #fff;
 }
 
 .btn-primary:active:not(:disabled) {
-  background-color: #1f2937;
-  border-color: #1f2937;
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary:focus {
-  outline: 2px solid #374151;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
 }
 
 .btn-primary:disabled {
-  background-color: #6b7280;
-  border-color: #6b7280;
-  opacity: 0.5;
+  background: #d1d5db;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background-color: transparent;
-  border: 1px solid #e5e7eb;
+  background-color: #fff;
+  border: 2px solid #e5e7eb;
   color: #374151;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #f9fafb;
   border-color: #d1d5db;
   color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .btn-secondary:active:not(:disabled) {
   background-color: #f3f4f6;
   border-color: #9ca3af;
+  transform: translateY(0);
 }
 
 .btn-secondary:focus {
-  outline: 2px solid #d1d5db;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(209, 213, 219, 0.3);
 }
 
 .btn-secondary:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Spinner Styles */
@@ -1233,5 +1801,74 @@ const handleForgotPassword = async () => {
   width: 16px;
   height: 16px;
   border-width: 2px;
+}
+
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 52px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 14px;
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.password-toggle-btn:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.password-toggle-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.password-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.password-toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Smooth scroll for messages container */
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+/* Add custom scrollbar for messages container */
+.messages-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+  border-radius: 4px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 </style>

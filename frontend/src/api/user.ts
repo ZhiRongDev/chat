@@ -36,6 +36,10 @@ export interface MessageResponse {
   message: string
 }
 
+export interface VerifyEmailPayload {
+  token: string
+}
+
 export const userApi = {
   /**
    * Login with username and password
@@ -48,9 +52,9 @@ export const userApi = {
   /**
    * Register a new user account
    */
-  register: async (payload: RegisterPayload): Promise<UserResponse> => {
+  register: async (payload: RegisterPayload): Promise<MessageResponse> => {
     console.log(payload);
-    const response = await api.post<UserResponse>('/user/register', payload)
+    const response = await api.post<MessageResponse>('/user/register', payload)
     console.log(response);
     return response.data
   },
@@ -76,6 +80,14 @@ export const userApi = {
    */
   resetPassword: async (payload: ResetPasswordPayload): Promise<MessageResponse> => {
     const response = await api.post<MessageResponse>('/user/reset-password', payload)
+    return response.data
+  },
+
+  /**
+   * Verify email using verification token
+   */
+  verifyEmail: async (payload: VerifyEmailPayload): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>('/user/verify-email', payload)
     return response.data
   },
 }

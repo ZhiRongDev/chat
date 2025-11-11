@@ -224,40 +224,31 @@ docker-compose logs -f frontend
 ## Node Version
 Project requires Node.js version ^20.19.0 or >=22.12.0 (specified in `frontend/package.json`).
 
-## RAG (Retrieval-Augmented Generation)
+## RAG (Retrieval-Augmented Generation) with Gemini File Search
 
 ### Overview
-The application implements a complete RAG system that enhances LLM responses with relevant context from a knowledge base.
+The application uses **Google's Gemini File Search API** for RAG functionality. This provides:
+- Automatic document chunking and embedding
+- Built-in semantic search
+- Integrated citations and grounding metadata
+- No manual vector store management
 
-### RAG Pipeline
+### How It Works
 ```
-User Query → Query Preprocessing → Vector Store Search → Top-k Documents
+User uploads documents → Gemini File Search Store → Documents indexed automatically
     ↓
-Prompt Builder → LLM → Response with Citations
+User query → Gemini File Search retrieval → Context-aware LLM response with citations
 ```
 
 ### Key Components
-1. **Query Preprocessing**: Clean query, generate embedding
-2. **Vector Store**: FAISS/ChromaDB for semantic search
-3. **Retrieval**: Top-k most relevant document chunks
-4. **Prompt Builder**: Format context with query for LLM
-5. **Response Generator**: LLM with citations
+1. **Document Upload**: Files uploaded to Gemini File Search Store (per-user)
+2. **Automatic Indexing**: Gemini handles chunking, embedding, and vector storage
+3. **RAG Query**: Gemini retrieves relevant context and generates responses
+4. **Citations**: Built-in grounding metadata shows which documents were used
 
 ### Using RAG
 
-**Chat with RAG enabled:**
-```bash
-curl -X POST http://localhost:5000/api/v1/chat/ \
-  -H "Content-Type: application/json" \
-  -d '{
-    "message": "What is machine learning?",
-    "use_rag": true,
-    "top_k": 5,
-    "min_score": 0.3
-  }'
-```
-
-**Upload documents:**
+**Upload documents (Authentication required):**
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/upload \
   -H "Authorization: Bearer <token>" \
@@ -275,22 +266,52 @@ curl -X POST http://localhost:5000/api/v1/documents/ingest/text \
   }'
 ```
 
+**Chat with RAG enabled (Authentication required):**
+```bash
+curl -X POST http://localhost:5000/api/v1/chat/ \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What is machine learning?",
+    "use_rag": true,
+    "provider": "gemini"
+  }'
+```
+
+**Get store information:**
+```bash
+curl -X GET http://localhost:5000/api/v1/documents/stores/info \
+  -H "Authorization: Bearer <token>"
+```
+
 ### Configuration
 ```bash
 # .env configuration
-EMBEDDING_PROVIDER=openai              # or google
-EMBEDDING_MODEL=text-embedding-3-small
-VECTOR_STORE_TYPE=faiss                # or chromadb
-CHUNK_SIZE=512
-CHUNK_OVERLAP=50
-RAG_TOP_K=5
-RAG_MIN_SCORE=0.3
+GEMINI_API_KEY=your-gemini-api-key-here         # Required for RAG
+GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp   # Model for RAG queries
+GEMINI_STORE_SIZE_LIMIT_GB=20                   # Recommended size limit per store
+GEMINI_MAX_FILE_SIZE_MB=100                     # Max file size for upload
 ```
 
-### Architecture Details
-See [RAG_ARCHITECTURE.md](backend/RAG_ARCHITECTURE.md) for complete documentation including:
-- Detailed component descriptions
-- API endpoint reference
-- Performance tuning
-- Best practices
-- Troubleshooting guide
+### Supported File Formats
+- **Documents**: PDF, DOCX, TXT, MD, RTF
+- **Data**: JSON, CSV, XML, YAML
+- **Code**: Python, Java, JavaScript, TypeScript, Go, etc.
+- **Presentations**: PPTX
+- **Spreadsheets**: XLSX
+- **Max size**: 100MB per file
+
+### Key Features
+- **Per-User Stores**: Each user has their own File Search Store
+- **Automatic Management**: No manual chunking or embedding configuration
+- **Built-in Citations**: Responses include grounding metadata
+- **Cost-Effective**: Only pay for indexing ($0.15/1M tokens), storage is free
+- **Persistent Storage**: Documents remain until explicitly deleted
+
+### Migration from Old RAG System
+The old FAISS/ChromaDB-based RAG system has been replaced with Gemini File Search. Key changes:
+- ❌ Removed: `embedding_service`, `vector_store`, `query_processor`, `retrieval_service`, `rag_pipeline`
+- ❌ Removed: FAISS, ChromaDB, tiktoken, sentence-transformers dependencies
+- ✅ Added: `gemini_file_search_service` with simplified API
+- ✅ Added: `GeminiFileSearchStore` model for per-user stores
+- ⚠️ **Breaking**: RAG now requires authentication and Gemini provider

@@ -5,7 +5,7 @@ from app.service.user_service import UserService
 from app.auth import get_current_user, create_access_token, CreateAccessTokenPayload, verify_access_token
 from app.error import ErrorCode
 from datetime import timedelta
-from app.utils import send_reset_email
+from app.utils import send_reset_email, send_verification_email
 from app.config import settings
 
 auth_router = APIRouter(
@@ -36,21 +36,25 @@ class LoginResponse(BaseModel):
     user: UserResponse
 
 
+class MessageResponse(BaseModel):
+    message: str
+
+
 # While setting response_model, it will only return the fields specified in the model.
 @auth_router.get("/", response_model=UserResponse)
 async def user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@nonauth_router.post("/register", response_model=UserResponse)
+@nonauth_router.post("/register", response_model=MessageResponse)
 async def register(payload: UserPayload):
     """
     Register a new user account.
 
-    - **username**: Unique username for the account
+    - **username**: Unique username (email address) for the account
     - **password**: Password for the account (will be hashed)
 
-    Returns the created user information.
+    Sends a verification email with a token. User must verify email before logging in.
     """
     user_service = UserService()
 
@@ -63,11 +67,27 @@ async def register(payload: UserPayload):
         username=payload.username,
         password=user_service.hash_the_password(payload.password),
         is_superuser=False,
+        is_verified=False,
     )
 
     user_created = user_service.create_user(user_to_create)
-    user_created.id = str(user_created.id)
-    return user_created
+
+    # Generate verification token (valid for 24 hours)
+    verification_token = create_access_token(
+        CreateAccessTokenPayload(sub=user_created.username, verify=True),
+        expires_delta=timedelta(hours=24)
+    )
+
+    # Send verification email
+    send_verification_email(
+        subject="驗證你的電子郵件",
+        to_email=payload.username,
+        verification_link=f"{settings.FRONTEND_HOST}/verify-email?token={verification_token}&username={payload.username}",
+    )
+
+    return MessageResponse(
+        message="Registration successful! Please check your email to verify your account."
+    )
 
 
 @nonauth_router.post("/login", response_model=LoginResponse)
@@ -95,6 +115,13 @@ async def login(payload: UserPayload):
             detail=ErrorCode.INVALID_CREDENTIALS,
         )
 
+    # Check if user has verified their email
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in. Check your email for the verification link.",
+        )
+
     access_token = create_access_token(CreateAccessTokenPayload(sub=user.username))
 
     return LoginResponse(
@@ -113,8 +140,8 @@ class ResetPasswordPayload(BaseModel):
     new_password: str
 
 
-class MessageResponse(BaseModel):
-    message: str
+class VerifyEmailPayload(BaseModel):
+    token: str
 
 
 @nonauth_router.post("/forgot-password", response_model=MessageResponse)
@@ -197,4 +224,53 @@ async def reset_password(payload: ResetPasswordPayload):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid or expired reset token"
+        )
+
+
+@nonauth_router.post("/verify-email", response_model=MessageResponse)
+async def verify_email(payload: VerifyEmailPayload):
+    """
+    Verify email address using the verification token.
+
+    - **token**: The verification token received via email
+
+    Returns success message if email is verified.
+    """
+    user_service = UserService()
+
+    try:
+        # Verify the token
+        token_data = verify_access_token(payload.token)
+        username = token_data.get('sub')
+
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid verification token"
+            )
+
+        # Get the user
+        user = user_service.get_user_by_username(username)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=ErrorCode.USER_NOT_FOUND
+            )
+
+        # Check if already verified
+        if user.is_verified:
+            return MessageResponse(message="Email is already verified. You can now log in.")
+
+        # Mark user as verified
+        user.is_verified = True
+        user_service.update_user(user)
+
+        return MessageResponse(message="Email verified successfully! You can now log in.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
         )

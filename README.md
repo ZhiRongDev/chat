@@ -7,7 +7,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 - **RAG-Enhanced Chat**: Chat with AI using standard LLM responses or RAG-enhanced responses with document context
 - **Document Management**: Upload and manage PDF, TXT, and Markdown documents
 - **Multi-Provider LLM Support**: Gemini, OpenAI, and Anthropic
-- **Vector Search**: FAISS and ChromaDB for semantic document retrieval
+- **Gemini File Search**: Automatic document indexing, embedding, and semantic retrieval
 - **User Authentication**: JWT-based authentication with bcrypt password hashing
 - **Real-time Updates**: Hot reload for development
 - **Dockerized**: Easy deployment with Docker Compose
@@ -26,13 +26,6 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 * Redis
 * SocketIO for processing progress.
 * Database migration.
-
-### Bonus:
-* Payuni API for pricing
-* Electron for APP
-* Celery Server
-* Pytest for uploading tests
-* Locust for stress testing
 
 ---
 
@@ -205,10 +198,10 @@ chat/
 │   │   ├── router/      # API route handlers
 │   │   ├── service/     # Business logic
 │   │   │   ├── llm/     # LLM service providers
-│   │   │   └── rag/     # RAG pipeline components
+│   │   │   └── gemini_file_search_service.py  # Gemini File Search RAG
 │   │   ├── auth.py      # JWT authentication
 │   │   └── config.py    # Settings & configuration
-│   ├── data/            # Vector store persistence
+│   ├── data/            # Application data
 │   ├── main.py          # Application entry point
 │   └── requirements.txt
 ├── frontend/            # Vue 3 frontend
@@ -366,37 +359,18 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 
 ### RAG Configuration
 
-#### Configure RAG Settings
+The application uses Google Gemini File Search for RAG functionality. Configuration is automatic:
+
 Edit `.env`:
 ```bash
-# Choose embedding provider
-EMBEDDING_PROVIDER=openai      # or 'google'
-EMBEDDING_MODEL=text-embedding-3-small
-
-# Choose vector store
-VECTOR_STORE_TYPE=faiss        # or 'chromadb'
-
-# Document chunking
-CHUNK_SIZE=512                 # Tokens per chunk
-CHUNK_OVERLAP=50               # Overlap between chunks
-
-# Retrieval settings
-RAG_TOP_K=5                    # Number of documents to retrieve
-RAG_MIN_SCORE=0.3              # Minimum relevance score
+# Gemini API Key (required for RAG)
+GEMINI_API_KEY=your-gemini-api-key-here
+GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp  # Model for RAG queries
+GEMINI_STORE_SIZE_LIMIT_GB=20                   # Recommended store size
+GEMINI_MAX_FILE_SIZE_MB=100                     # Max upload size
 ```
 
-#### Vector Store Locations
-- **FAISS**: `backend/data/vector_stores/default/`
-- **ChromaDB**: `backend/data/vector_stores/default/`
-
-#### Clear Vector Store
-```bash
-# Remove vector store data
-rm -rf backend/data/vector_stores/
-
-# Restart backend to recreate
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml restart backend
-```
+For detailed RAG usage, see [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI_FILE_SEARCH.md)
 
 ### Testing
 
@@ -531,7 +505,8 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 ## Additional Resources
 
-- **Backend Architecture**: See [backend/RAG_ARCHITECTURE.md](backend/RAG_ARCHITECTURE.md)
+- **Gemini File Search Guide**: See [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI_FILE_SEARCH.md)
+- **Docker Deployment**: See [DOCKER_README.md](DOCKER_README.md) and [DOCKER_SETUP.md](DOCKER_SETUP.md)
 - **Claude Code Guide**: See [CLAUDE.md](CLAUDE.md)
 - **API Documentation**: http://localhost:5000/docs (when running)
 

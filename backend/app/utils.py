@@ -99,3 +99,54 @@ def send_reset_email(to_email: str, subject: str, reset_link: str):
     except HttpError as error:
         print(f"❌ An error occurred: {error}")
         return None
+
+
+def send_verification_email(to_email: str, subject: str, verification_link: str):
+    """Send a verification email via Gmail API using OAuth2"""
+    creds = get_gmail_credentials()
+
+    try:
+        service = build("gmail", "v1", credentials=creds)
+
+        # Create message with both text and HTML versions
+        message = EmailMessage()
+        plain_text = f"Verify your email: {verification_link}"
+        html_content = f"""
+        <html>
+            <body>
+                <h2>歡迎註冊!</h2>
+                <p>請點選以下連結來驗證你的電子郵件地址:</p>
+                <p>
+                    <a href="{verification_link}" style="
+                        padding: 10px 20px;
+                        background-color: #28a745;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        display: inline-block;
+                    ">驗證電子郵件</a>
+                </p>
+                <p>此連結將在 24 小時內有效。</p>
+            </body>
+        </html>
+        """
+
+        message.set_content(plain_text)
+        message.add_alternative(html_content, subtype="html")
+
+        message["To"] = to_email
+        message["From"] = settings.FROM_EMAIL
+        message["Subject"] = subject
+
+        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        create_message = {"raw": encoded_message}
+
+        send_result = (
+            service.users().messages().send(userId="me", body=create_message).execute()
+        )
+        print(f"✅ Verification email sent. ID: {send_result['id']}")
+        return send_result
+
+    except HttpError as error:
+        print(f"❌ An error occurred: {error}")
+        return None

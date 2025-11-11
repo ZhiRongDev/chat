@@ -2,48 +2,6 @@
   <div class="chat-settings">
     <h4>Chat Settings</h4>
 
-    <!-- RAG Settings -->
-    <div class="settings-section">
-      <h5>
-        <i class="bi bi-database"></i>
-        RAG (Retrieval-Augmented Generation)
-      </h5>
-
-      <div class="setting-item">
-        <div class="setting-header">
-          <label class="form-check-label">
-            Enable RAG Mode
-          </label>
-          <div class="form-check form-switch">
-            <input v-model="localSettings.useRag" class="form-check-input" type="checkbox" id="ragToggle" />
-          </div>
-        </div>
-        <small class="text-muted">
-          Use document knowledge base to enhance responses
-        </small>
-      </div>
-
-      <div v-if="localSettings.useRag" class="rag-options">
-        <div class="setting-item">
-          <label for="topK">Top-K Results: {{ localSettings.topK }}</label>
-          <input v-model.number="localSettings.topK" type="range" class="form-range" id="topK" min="1" max="10"
-            step="1" />
-          <small class="text-muted">
-            Number of relevant document chunks to retrieve (1-10)
-          </small>
-        </div>
-
-        <div class="setting-item">
-          <label for="minScore">Minimum Relevance Score: {{ localSettings.minScore.toFixed(2) }}</label>
-          <input v-model.number="localSettings.minScore" type="range" class="form-range" id="minScore" min="0" max="1"
-            step="0.05" />
-          <small class="text-muted">
-            Minimum similarity threshold (0.0 = any relevance, 1.0 = exact match)
-          </small>
-        </div>
-      </div>
-    </div>
-
     <!-- LLM Provider Settings -->
     <div class="settings-section">
       <h5>
@@ -55,31 +13,40 @@
         <label for="provider">Provider</label>
         <select v-model="localSettings.provider" class="form-select" id="provider">
           <option value="">Auto-detect (uses first available API key)</option>
-          <option value="gemini">Google Gemini</option>
+          <option value="gemini">Google Gemini (Required for RAG)</option>
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic Claude</option>
         </select>
         <small class="text-muted">
-          Auto-detect will automatically choose a provider based on available API keys (priority: Gemini → OpenAI → Anthropic)
+          <strong>Note:</strong> RAG mode requires Gemini provider. Auto-detect priority: Gemini →
+          OpenAI → Anthropic
         </small>
       </div>
 
       <div class="setting-item">
         <label for="model">Model (optional)</label>
-        <input v-model="localSettings.model" type="text" class="form-control" id="model"
-          placeholder="e.g., gpt-4, gemini-pro" />
-        <small class="text-muted">
-          Leave empty to use provider's default model
-        </small>
+        <input
+          v-model="localSettings.model"
+          type="text"
+          class="form-control"
+          id="model"
+          placeholder="e.g., gpt-4, gemini-pro, gemini-2.0-flash-exp"
+        />
+        <small class="text-muted"> Leave empty to use provider's default model </small>
       </div>
 
       <div class="setting-item">
         <label for="temperature">Temperature: {{ localSettings.temperature.toFixed(1) }}</label>
-        <input v-model.number="localSettings.temperature" type="range" class="form-range" id="temperature" min="0"
-          max="2" step="0.1" />
-        <small class="text-muted">
-          Lower = more focused, Higher = more creative (0.0-2.0)
-        </small>
+        <input
+          v-model.number="localSettings.temperature"
+          type="range"
+          class="form-range"
+          id="temperature"
+          min="0"
+          max="2"
+          step="0.1"
+        />
+        <small class="text-muted"> Lower = more focused, Higher = more creative (0.0-2.0) </small>
       </div>
     </div>
 
@@ -90,47 +57,125 @@
         API Keys
       </h5>
       <small class="text-muted mb-3 d-block">
-        Enter your API keys to use the respective LLM providers. Keys are stored locally in your browser.
+        Enter your API keys to use the respective LLM providers. Keys are stored locally in your
+        browser.
       </small>
 
       <div class="setting-item">
-        <label for="geminiApiKey">Google Gemini API Key</label>
-        <input v-model="localSettings.geminiApiKey" type="password" class="form-control" id="geminiApiKey"
-          placeholder="Enter your Gemini API key" />
+        <label for="geminiApiKey"
+          >Google Gemini API Key <span class="text-danger">*Required for RAG</span></label
+        >
+        <input
+          v-model="localSettings.geminiApiKey"
+          type="password"
+          class="form-control"
+          id="geminiApiKey"
+          placeholder="Enter your Gemini API key"
+        />
         <small class="text-muted">
-          Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+          Get your API key from
+          <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
         </small>
       </div>
 
       <div class="setting-item">
         <label for="openaiApiKey">OpenAI API Key</label>
-        <input v-model="localSettings.openaiApiKey" type="password" class="form-control" id="openaiApiKey"
-          placeholder="Enter your OpenAI API key" />
+        <input
+          v-model="localSettings.openaiApiKey"
+          type="password"
+          class="form-control"
+          id="openaiApiKey"
+          placeholder="Enter your OpenAI API key"
+        />
         <small class="text-muted">
-          Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+          Get your API key from
+          <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
         </small>
       </div>
 
       <div class="setting-item">
         <label for="anthropicApiKey">Anthropic Claude API Key</label>
-        <input v-model="localSettings.anthropicApiKey" type="password" class="form-control" id="anthropicApiKey"
-          placeholder="Enter your Anthropic API key" />
+        <input
+          v-model="localSettings.anthropicApiKey"
+          type="password"
+          class="form-control"
+          id="anthropicApiKey"
+          placeholder="Enter your Anthropic API key"
+        />
         <small class="text-muted">
-          Get your API key from <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic
-            Console</a>
+          Get your API key from
+          <a href="https://console.anthropic.com/settings/keys" target="_blank"
+            >Anthropic Console</a
+          >
         </small>
       </div>
     </div>
 
-    <!-- Document Library -->
-    <div class="settings-section">
+    <!-- RAG Settings (Only show when logged in) -->
+    <div v-if="isLoggedIn" class="settings-section">
+      <h5>
+        <i class="bi bi-database"></i>
+        RAG (Retrieval-Augmented Generation)
+      </h5>
+
+      <div class="setting-item">
+        <div class="setting-header">
+          <label class="form-check-label"> Enable RAG Mode </label>
+          <div class="form-check form-switch">
+            <input
+              v-model="localSettings.useRag"
+              class="form-check-input"
+              type="checkbox"
+              id="ragToggle"
+            />
+          </div>
+        </div>
+        <small class="text-muted">
+          Use Gemini File Search to enhance responses with your uploaded documents
+        </small>
+      </div>
+
+      <div v-if="localSettings.useRag" class="rag-options">
+        <div class="alert alert-info" role="alert">
+          <i class="bi bi-info-circle me-2"></i>
+          <strong>Gemini File Search:</strong> Document retrieval and relevance are automatically
+          optimized by Google's Gemini API.
+        </div>
+
+        <div class="setting-item">
+          <label for="maxOutputTokens"
+            >Max Response Length: {{ localSettings.maxOutputTokens }}</label
+          >
+          <input
+            v-model.number="localSettings.maxOutputTokens"
+            type="range"
+            class="form-range"
+            id="maxOutputTokens"
+            min="512"
+            max="8192"
+            step="256"
+          />
+          <small class="text-muted">
+            Maximum tokens in RAG response (512-8192). Higher = longer, more detailed responses.
+          </small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Library (Only show when logged in) -->
+    <div v-if="isLoggedIn" class="settings-section">
       <div class="section-header">
         <h5>
           <i class="bi bi-folder"></i>
           Document Library
         </h5>
-        <button class="btn-refresh" @click="fetchDocuments" :disabled="loadingDocuments" title="Refresh document list">
-          <i :class="['bi bi-arrow-clockwise', { 'spinning': loadingDocuments }]"></i>
+        <button
+          class="btn-refresh"
+          @click="fetchDocuments"
+          :disabled="loadingDocuments"
+          title="Refresh document list"
+        >
+          <i :class="['bi bi-arrow-clockwise', { spinning: loadingDocuments }]"></i>
         </button>
       </div>
 
@@ -145,9 +190,11 @@
                 <div class="document-meta">
                   <span class="file-size">{{ formatFileSize(doc.file_size) }}</span>
                   <span class="separator">•</span>
-                  <span class="chunk-count">{{ doc.chunk_count }} chunks</span>
-                  <span class="separator">•</span>
                   <span class="upload-date">{{ formatDate(doc.created_at) }}</span>
+                  <span v-if="doc.gemini_file_id" class="separator">•</span>
+                  <span v-if="doc.gemini_file_id" class="gemini-badge">
+                    <i class="bi bi-cloud-check"></i> Gemini
+                  </span>
                 </div>
               </div>
             </div>
@@ -159,11 +206,11 @@
             </div>
           </div>
           <div class="document-actions">
-            <button class="btn-action btn-preview" @click="previewDocument(doc.id)"
-              :disabled="doc.status !== 'completed'" title="Preview document chunks">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn-action btn-delete" @click="confirmDeleteDocument(doc.id)" title="Delete document">
+            <button
+              class="btn-action btn-delete"
+              @click="confirmDeleteDocument(doc.id)"
+              title="Delete document"
+            >
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -172,8 +219,10 @@
 
       <div v-else-if="!loadingDocuments" class="empty-state">
         <i class="bi bi-inbox"></i>
-        <p>No documents uploaded yet</p>
-        <small>Upload your first document to get started</small>
+        <p v-if="!isLoggedIn">Please log in to manage documents</p>
+        <p v-else>No documents uploaded yet</p>
+        <small v-if="!isLoggedIn">Document management requires authentication</small>
+        <small v-else>Upload your first document to enable RAG</small>
       </div>
 
       <div v-if="loadingDocuments" class="loading-state">
@@ -186,11 +235,17 @@
       <!-- Upload Section -->
       <div class="upload-section">
         <div class="upload-tabs">
-          <button :class="['tab-btn', { active: uploadTab === 'file' }]" @click="uploadTab = 'file'">
+          <button
+            :class="['tab-btn', { active: uploadTab === 'file' }]"
+            @click="uploadTab = 'file'"
+          >
             <i class="bi bi-file-earmark-arrow-up"></i>
             Upload File
           </button>
-          <button :class="['tab-btn', { active: uploadTab === 'text' }]" @click="uploadTab = 'text'">
+          <button
+            :class="['tab-btn', { active: uploadTab === 'text' }]"
+            @click="uploadTab = 'text'"
+          >
             <i class="bi bi-file-text"></i>
             Add Text
           </button>
@@ -198,12 +253,22 @@
 
         <!-- File Upload Tab -->
         <div v-if="uploadTab === 'file'" class="upload-content">
-          <div class="file-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
-            <input ref="fileInput" type="file" accept=".pdf,.txt,.md" @change="handleFileSelect"
-              style="display: none" />
+          <div
+            class="file-upload-area"
+            @click="triggerFileInput"
+            @dragover.prevent
+            @drop.prevent="handleFileDrop"
+          >
+            <input
+              ref="fileInput"
+              type="file"
+              accept=".pdf,.txt,.md,.docx,.json,.csv"
+              @change="handleFileSelect"
+              style="display: none"
+            />
             <i class="bi bi-cloud-upload"></i>
             <p>Click to upload or drag and drop</p>
-            <small class="text-muted">Supports PDF, TXT, MD files</small>
+            <small class="text-muted">Supports PDF, TXT, MD, DOCX, JSON, CSV (max 100MB)</small>
           </div>
           <div v-if="selectedFile" class="selected-file">
             <i class="bi bi-file-earmark"></i>
@@ -212,7 +277,12 @@
               <i class="bi bi-x"></i>
             </button>
           </div>
-          <button v-if="selectedFile" class="btn btn-primary w-100 mt-3" @click="uploadFile" :disabled="uploading">
+          <button
+            v-if="selectedFile"
+            class="btn btn-primary w-100 mt-3"
+            @click="uploadFile"
+            :disabled="uploading"
+          >
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Uploading...' : 'Upload Document' }}
           </button>
@@ -222,16 +292,29 @@
         <div v-if="uploadTab === 'text'" class="upload-content">
           <div class="setting-item">
             <label for="textTitle">Document Title</label>
-            <input v-model="textDocument.title" type="text" class="form-control" id="textTitle"
-              placeholder="Enter document title" />
+            <input
+              v-model="textDocument.title"
+              type="text"
+              class="form-control"
+              id="textTitle"
+              placeholder="Enter document title"
+            />
           </div>
           <div class="setting-item">
             <label for="textContent">Content</label>
-            <textarea v-model="textDocument.content" class="form-control" id="textContent" rows="6"
-              placeholder="Paste or type your content here..."></textarea>
+            <textarea
+              v-model="textDocument.content"
+              class="form-control"
+              id="textContent"
+              rows="6"
+              placeholder="Paste or type your content here..."
+            ></textarea>
           </div>
-          <button class="btn btn-primary w-100" @click="uploadText"
-            :disabled="!textDocument.title || !textDocument.content || uploading">
+          <button
+            class="btn btn-primary w-100"
+            @click="uploadText"
+            :disabled="!textDocument.title || !textDocument.content || uploading"
+          >
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Adding...' : 'Add Document' }}
           </button>
@@ -239,7 +322,11 @@
 
         <!-- Upload Status -->
         <div v-if="uploadStatus" :class="['upload-status', uploadStatus.type]">
-          <i :class="uploadStatus.type === 'success' ? 'bi bi-check-circle' : 'bi bi-exclamation-circle'"></i>
+          <i
+            :class="
+              uploadStatus.type === 'success' ? 'bi bi-check-circle' : 'bi bi-exclamation-circle'
+            "
+          ></i>
           {{ uploadStatus.message }}
         </div>
       </div>
@@ -260,13 +347,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { appendAlert } from '@/utils/alert'
 
 export interface ChatSettings {
   useRag: boolean
-  topK: number
-  minScore: number
+  maxOutputTokens: number
   provider: string
   model: string
   temperature: number
@@ -286,9 +372,13 @@ const emit = defineEmits<{
 const localSettings = ref<ChatSettings>({ ...props.modelValue })
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
-  localSettings.value = { ...newValue }
-}, { deep: true })
+watch(
+  () => props.modelValue,
+  (newValue) => {
+    localSettings.value = { ...newValue }
+  },
+  { deep: true },
+)
 
 const saveSettings = () => {
   emit('update:modelValue', { ...localSettings.value })
@@ -301,8 +391,7 @@ const saveSettings = () => {
 const resetSettings = () => {
   const defaults: ChatSettings = {
     useRag: false,
-    topK: 5,
-    minScore: 0.3,
+    maxOutputTokens: 2048,
     provider: '',
     model: '',
     temperature: 0.7,
@@ -320,27 +409,18 @@ interface DocumentItem {
   filename: string
   file_type: string
   file_size: number
-  chunk_count: number
   status: string
+  gemini_file_id?: string
   created_at: number
   updated_at: number
 }
 
-interface DocumentDetail extends DocumentItem {
-  error_message?: string
-  metadata?: any
-  chunks?: Array<{
-    id: string
-    chunk_index: number
-    content: string
-    token_count: number
-  }>
-}
-
 const documents = ref<DocumentItem[]>([])
 const loadingDocuments = ref(false)
-const previewModal = ref<DocumentDetail | null>(null)
 const deleteConfirmId = ref<string | null>(null)
+
+// Check if user is logged in
+const isLoggedIn = computed(() => !!localStorage.getItem('token'))
 
 // Upload state
 const uploadTab = ref<'file' | 'text'>('file')
@@ -350,7 +430,16 @@ const uploading = ref(false)
 const uploadStatus = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 const textDocument = ref({
   title: '',
-  content: ''
+  content: '',
+})
+
+// Watch for login state changes - disable RAG if user logs out
+watch(isLoggedIn, (newValue) => {
+  if (!newValue && localSettings.value.useRag) {
+    // User logged out while RAG was enabled, disable it
+    localSettings.value.useRag = false
+    saveSettings()
+  }
 })
 
 // File upload handlers
@@ -408,14 +497,14 @@ const uploadFile = async () => {
 
     uploadStatus.value = {
       type: 'success',
-      message: 'Document uploaded successfully!'
+      message: 'Document uploaded successfully to Gemini File Search!',
     }
     clearFile()
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
       type: 'error',
-      message: error.message || 'Failed to upload document. Please try again.'
+      message: error.message || 'Failed to upload document. Please try again.',
     }
   } finally {
     uploading.value = false
@@ -458,14 +547,14 @@ const uploadText = async () => {
 
     uploadStatus.value = {
       type: 'success',
-      message: 'Text document added successfully!'
+      message: 'Text document added successfully to Gemini File Search!',
     }
     textDocument.value = { title: '', content: '' }
   } catch (error: any) {
     console.error('Upload error:', error)
     uploadStatus.value = {
       type: 'error',
-      message: error.message || 'Failed to add document. Please try again.'
+      message: error.message || 'Failed to add document. Please try again.',
     }
   } finally {
     uploading.value = false
@@ -482,9 +571,16 @@ const fetchDocuments = async () => {
   loadingDocuments.value = true
   try {
     const token = localStorage.getItem('token')
-    const headers: HeadersInit = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+
+    // If not logged in, just set empty array and return
+    if (!token) {
+      documents.value = []
+      loadingDocuments.value = false
+      return
+    }
+
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${token}`,
     }
 
     const response = await fetch('http://localhost:5000/api/v1/documents/', {
@@ -493,75 +589,41 @@ const fetchDocuments = async () => {
     })
 
     if (!response.ok) {
+      // If unauthorized, clear documents silently
+      if (response.status === 401) {
+        documents.value = []
+        return
+      }
       throw new Error('Failed to fetch documents')
     }
 
     documents.value = await response.json()
   } catch (error: any) {
     console.error('Error fetching documents:', error)
-    uploadStatus.value = {
-      type: 'error',
-      message: 'Failed to load documents'
+    documents.value = []
+    // Don't show error message if not authenticated
+    const token = localStorage.getItem('token')
+    if (token) {
+      uploadStatus.value = {
+        type: 'error',
+        message: 'Failed to load documents',
+      }
+      setTimeout(() => {
+        uploadStatus.value = null
+      }, 3000)
     }
-    setTimeout(() => {
-      uploadStatus.value = null
-    }, 3000)
   } finally {
     loadingDocuments.value = false
   }
 }
 
-const previewDocument = async (documentId: string) => {
-  try {
-    const token = localStorage.getItem('token')
-    const headers: HeadersInit = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    const response = await fetch(
-      `http://localhost:5000/api/v1/documents/${documentId}?include_chunks=true`,
-      {
-        method: 'GET',
-        headers,
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch document details')
-    }
-
-    const docDetail: DocumentDetail = await response.json()
-    previewModal.value = docDetail
-    // Show modal (we'll add this to the template)
-    showPreviewModal(docDetail)
-  } catch (error: any) {
-    console.error('Error previewing document:', error)
-    alert('Failed to preview document')
-  }
-}
-
-const showPreviewModal = (doc: DocumentDetail) => {
-  // Create a simple alert with document info for now
-  // You can enhance this with a proper modal component
-  const chunkInfo = doc.chunks
-    ? `\n\nChunks Preview:\n${doc.chunks.slice(0, 3).map(c =>
-      `Chunk ${c.chunk_index + 1} (${c.token_count} tokens):\n${c.content}`
-    ).join('\n\n')}`
-    : ''
-
-  alert(`Document: ${doc.filename}\n` +
-    `Type: ${doc.file_type}\n` +
-    `Size: ${formatFileSize(doc.file_size)}\n` +
-    `Status: ${doc.status}\n` +
-    `Chunks: ${doc.chunk_count}\n` +
-    `Created: ${formatDate(doc.created_at)}` +
-    chunkInfo)
-}
-
 const confirmDeleteDocument = (documentId: string) => {
   deleteConfirmId.value = documentId
-  if (confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+  if (
+    confirm(
+      'Are you sure you want to delete this document from Gemini File Search? This action cannot be undone.',
+    )
+  ) {
     deleteDocument(documentId)
   }
 }
@@ -585,13 +647,13 @@ const deleteDocument = async (documentId: string) => {
 
     uploadStatus.value = {
       type: 'success',
-      message: 'Document deleted successfully'
+      message: 'Document deleted successfully',
     }
   } catch (error: any) {
     console.error('Error deleting document:', error)
     uploadStatus.value = {
       type: 'error',
-      message: 'Failed to delete document'
+      message: 'Failed to delete document',
     }
   } finally {
     deleteConfirmId.value = null
@@ -606,20 +668,23 @@ const deleteDocument = async (documentId: string) => {
 // Helper functions
 const getFileIcon = (fileType: string): string => {
   const iconMap: Record<string, string> = {
-    'pdf': 'bi bi-file-pdf text-danger',
-    'txt': 'bi bi-file-text text-primary',
-    'md': 'bi bi-markdown text-info',
-    'text': 'bi bi-file-text text-primary',
+    pdf: 'bi bi-file-pdf text-danger',
+    txt: 'bi bi-file-text text-primary',
+    md: 'bi bi-markdown text-info',
+    text: 'bi bi-file-text text-primary',
+    docx: 'bi bi-file-word text-primary',
+    json: 'bi bi-file-code text-warning',
+    csv: 'bi bi-file-spreadsheet text-success',
   }
   return iconMap[fileType.toLowerCase()] || 'bi bi-file-earmark'
 }
 
 const getStatusIcon = (status: string): string => {
   const iconMap: Record<string, string> = {
-    'completed': 'bi bi-check-circle',
-    'processing': 'bi bi-hourglass-split',
-    'failed': 'bi bi-exclamation-circle',
-    'pending': 'bi bi-clock',
+    completed: 'bi bi-check-circle',
+    processing: 'bi bi-hourglass-split',
+    failed: 'bi bi-exclamation-circle',
+    pending: 'bi bi-clock',
   }
   return iconMap[status] || 'bi bi-question-circle'
 }
@@ -657,7 +722,16 @@ const loadSettings = () => {
   const saved = localStorage.getItem('chatSettings')
   if (saved) {
     try {
-      localSettings.value = JSON.parse(saved)
+      const parsed = JSON.parse(saved)
+      // Migrate old settings: remove topK and minScore, add maxOutputTokens
+      if ('topK' in parsed || 'minScore' in parsed) {
+        delete parsed.topK
+        delete parsed.minScore
+        if (!('maxOutputTokens' in parsed)) {
+          parsed.maxOutputTokens = 2048
+        }
+      }
+      localSettings.value = { ...localSettings.value, ...parsed }
       emit('update:modelValue', localSettings.value)
     } catch (e) {
       console.error('Failed to load settings:', e)
@@ -671,6 +745,7 @@ fetchDocuments()
 </script>
 
 <style scoped>
+/* Keep all existing styles... */
 .chat-settings {
   padding: 1rem;
   max-width: 600px;
@@ -728,6 +803,23 @@ fetchDocuments()
   margin-top: 1rem;
   padding-left: 1rem;
   border-left: 3px solid var(--bs-primary);
+}
+
+.alert-info {
+  background-color: #e3f2fd;
+  border-color: #90caf9;
+  color: #0d47a1;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.gemini-badge {
+  color: #1976d2;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 /* Section Header with Refresh Button */
@@ -789,48 +881,60 @@ fetchDocuments()
 /* Document List Styles */
 .document-list {
   margin-bottom: 1.5rem;
-  max-height: 400px;
+  max-height: 500px;
   overflow-y: auto;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: white;
+  padding-right: 0.5rem;
+}
+
+.document-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.document-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.document-list::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.document-list::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .document-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   padding: 1rem;
-  border-bottom: 1px solid #f3f4f6;
-  transition: background-color 0.2s;
-}
-
-.document-item:last-child {
-  border-bottom: none;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  transition: all 0.2s ease;
 }
 
 .document-item:hover {
-  background-color: #f9fafb;
+  border-color: #111827;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .document-info {
   flex: 1;
   min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
 }
 
 .document-header {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  flex: 1;
-  min-width: 0;
+  margin-bottom: 0.5rem;
 }
 
-.document-header>i {
+.document-header > i {
   font-size: 1.5rem;
   flex-shrink: 0;
   margin-top: 0.1rem;
@@ -846,9 +950,7 @@ fetchDocuments()
   font-size: 0.95rem;
   color: #111827;
   margin-bottom: 0.25rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
 .document-meta {
@@ -865,38 +967,46 @@ fetchDocuments()
 }
 
 .document-status {
-  flex-shrink: 0;
+  margin-top: 0.5rem;
 }
 
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   padding: 0.35rem 0.75rem;
-  border-radius: 20px;
+  border-radius: 6px;
   font-size: 0.8rem;
   font-weight: 500;
   text-transform: capitalize;
 }
 
+.status-badge i {
+  font-size: 0.9rem;
+}
+
 .status-badge.completed {
-  background-color: #d1fae5;
-  color: #065f46;
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
 }
 
 .status-badge.processing {
   background-color: #fef3c7;
-  color: #92400e;
+  color: #d97706;
+  border: 1px solid #fde68a;
 }
 
 .status-badge.failed {
-  background-color: #fee2e2;
-  color: #991b1b;
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 .status-badge.pending {
-  background-color: #e0e7ff;
-  color: #3730a3;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
 }
 
 .document-actions {
@@ -933,12 +1043,6 @@ fetchDocuments()
   cursor: not-allowed;
 }
 
-.btn-preview:hover:not(:disabled) {
-  color: #2563eb;
-  border-color: #2563eb;
-  background-color: #eff6ff;
-}
-
 .btn-delete:hover:not(:disabled) {
   color: #dc2626;
   border-color: #dc2626;
@@ -948,7 +1052,7 @@ fetchDocuments()
 /* Empty State */
 .empty-state {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 3rem 2rem;
   color: #9ca3af;
 }
 
@@ -963,6 +1067,7 @@ fetchDocuments()
   margin: 0.5rem 0;
   font-weight: 500;
   color: #6b7280;
+  font-size: 1rem;
 }
 
 .empty-state small {
@@ -972,13 +1077,17 @@ fetchDocuments()
 /* Loading State */
 .loading-state {
   text-align: center;
-  padding: 2rem 1rem;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.loading-state .spinner-border {
+  margin-bottom: 1rem;
 }
 
 .loading-state p {
-  margin-top: 1rem;
-  color: #6b7280;
-  font-size: 0.9rem;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .settings-actions {
@@ -1205,182 +1314,6 @@ textarea.form-control {
   width: 1rem;
   height: 1rem;
   border-width: 2px;
-}
-
-/* Enhanced Document List with Scrollbar */
-.document-list {
-  margin-bottom: 1.5rem;
-  max-height: 500px;
-  overflow-y: auto;
-  padding-right: 0.5rem;
-}
-
-.document-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.document-list::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.document-list::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
-}
-
-.document-list::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
-}
-
-.document-item {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  transition: all 0.2s ease;
-}
-
-.document-item:hover {
-  border-color: #111827;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.document-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.document-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-}
-
-.document-header>i {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-  margin-top: 0.1rem;
-}
-
-.document-details {
-  flex: 1;
-  min-width: 0;
-}
-
-.document-details strong {
-  display: block;
-  font-size: 0.95rem;
-  color: #111827;
-  margin-bottom: 0.25rem;
-  word-break: break-word;
-}
-
-.document-meta {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: #6b7280;
-  flex-wrap: wrap;
-}
-
-.document-meta .separator {
-  color: #d1d5db;
-}
-
-.document-status {
-  margin-top: 0.5rem;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.status-badge i {
-  font-size: 0.9rem;
-}
-
-.status-badge.completed {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-}
-
-.status-badge.processing {
-  background-color: #fef3c7;
-  color: #d97706;
-  border: 1px solid #fde68a;
-}
-
-.status-badge.failed {
-  background-color: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
-}
-
-.status-badge.pending {
-  background-color: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
-}
-
-.document-actions {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 3rem 2rem;
-  color: #9ca3af;
-}
-
-.empty-state i {
-  font-size: 3rem;
-  display: block;
-  margin-bottom: 1rem;
-  color: #d1d5db;
-}
-
-.empty-state p {
-  margin: 0.5rem 0;
-  font-weight: 500;
-  color: #6b7280;
-  font-size: 1rem;
-}
-
-.empty-state small {
-  color: #9ca3af;
-}
-
-.loading-state {
-  text-align: center;
-  padding: 2rem;
-  color: #6b7280;
-}
-
-.loading-state .spinner-border {
-  margin-bottom: 1rem;
-}
-
-.loading-state p {
-  margin: 0;
-  font-size: 0.95rem;
 }
 
 /* Responsive adjustments */
