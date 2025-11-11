@@ -108,7 +108,6 @@ const handleVerifyEmail = async (token: string) => {
 
     verificationStatus.value = 'success'
     successMessage.value = response.message
-    appendAlert(response.message, 'success')
 
     // Redirect to home after 3 seconds
     setTimeout(() => {
@@ -138,57 +137,86 @@ const goToHome = () => {
   align-items: center;
   justify-content: center;
   padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
 }
 
 .verify-email-card {
   width: 100%;
-  max-width: 500px;
+  max-width: 520px;
   background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 10px 40px rgba(102, 126, 234, 0.3);
   overflow: hidden;
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card-header {
-  padding: 32px 32px 24px;
+  padding: 40px 32px 32px;
   text-align: center;
   border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(to bottom, #fff, #f9fafb);
 }
 
 .title {
   font-size: 28px;
   font-weight: 700;
-  color: #111;
-  margin-bottom: 8px;
+  color: #111827;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
 }
 
 .subtitle {
   font-size: 15px;
   color: #6b7280;
   margin: 0;
+  line-height: 1.5;
 }
 
 .card-body {
   padding: 32px;
+  background: #fff;
 }
 
 /* Alert Styles */
 .alert {
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 14px;
+  font-weight: 500;
   margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .alert {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 }
 
 .alert-danger {
-  background-color: #fef2f2;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #dc2626;
   border-left: 4px solid #dc2626;
 }
 
 .alert-success {
-  background-color: #f0fdf4;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border-left: 4px solid #16a34a;
 }
@@ -196,18 +224,31 @@ const goToHome = () => {
 /* Icon Styles */
 .success-icon {
   color: #16a34a;
+  animation: scaleIn 0.4s ease-out;
 }
 
 .error-icon {
   color: #dc2626;
+  animation: scaleIn 0.4s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Button Styles */
 .btn {
-  padding: 12px 20px;
+  padding: 12px 24px;
   font-size: 15px;
-  font-weight: 500;
-  border-radius: 8px;
+  font-weight: 600;
+  border-radius: 12px;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -215,29 +256,87 @@ const goToHome = () => {
   border: none;
   cursor: pointer;
   line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
 }
 
 .btn-primary {
-  background-color: #111827;
-  border: 1px solid #111827;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #000;
-  border-color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   color: #fff;
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 /* Spinner */
 .spinner-border {
   width: 3rem;
   height: 3rem;
+  border-width: 3px;
+  border-color: #667eea;
+  border-right-color: transparent;
+  animation: spinner 0.75s linear infinite;
+}
+
+@keyframes spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.text-primary {
+  color: #667eea !important;
 }
 
 /* Text Utilities */
+.text-center {
+  text-align: center;
+}
+
 .text-muted {
   color: #6b7280;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .text-muted {
+    font-size: 13px;
+  }
+}
+
+.py-4 {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+.mb-3 {
+  margin-bottom: 1rem;
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem;
 }
 
 .visually-hidden {
@@ -253,21 +352,36 @@ const goToHome = () => {
 }
 
 /* Responsive */
-@media (max-width: 576px) {
+@media (max-width: 768px) {
+  .verify-email-container {
+    padding: 16px;
+  }
+
   .verify-email-card {
-    margin: 20px;
+    max-width: 100%;
+    border-radius: 16px;
   }
 
   .card-header {
-    padding: 24px 20px 16px;
+    padding: 32px 24px 24px;
   }
 
   .card-body {
-    padding: 20px;
+    padding: 24px;
   }
 
   .title {
     font-size: 24px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .success-icon svg,
+  .error-icon svg {
+    width: 48px;
+    height: 48px;
   }
 }
 </style>

@@ -26,7 +26,7 @@
             ></path>
           </svg>
         </button>
-        <div class="header-title">ChatGPT</div>
+        <div class="header-title">Chat</div>
         <div class="spacer"></div>
       </div>
 
@@ -1009,7 +1009,6 @@ const handleRegister = async () => {
 
     // Show success message - user needs to verify email
     successMessage.value = response.message
-    appendAlert(response.message, 'success')
 
     // Clear form
     registerForm.value = { username: '', password: '', confirmPassword: '' }
@@ -1048,7 +1047,6 @@ const handleForgotPassword = async () => {
     })
 
     successMessage.value = response.message
-    appendAlert(response.message, 'success')
 
     // Clear form
     forgotPasswordForm.value.username = ''
@@ -1076,7 +1074,8 @@ const handleForgotPassword = async () => {
   display: flex;
   width: 100%;
   height: 100vh;
-  background: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
 }
 
 .main-container {
@@ -1084,15 +1083,32 @@ const handleForgotPassword = async () => {
   display: flex;
   flex-direction: column;
   background: #fff;
+  border-radius: 0;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Mobile: Sidebar overlay on small screens */
+@media (max-width: 768px) {
+  .main-container {
+    border-radius: 0;
+  }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
-  background: #fff;
+  background: linear-gradient(to right, #fff, #f9fafb);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+  }
 }
 
 .menu-btn {
@@ -1102,7 +1118,7 @@ const handleForgotPassword = async () => {
   background: none;
   border: none;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 8px;
   transition: all 0.2s;
   display: flex;
   align-items: center;
@@ -1111,31 +1127,62 @@ const handleForgotPassword = async () => {
 
 .menu-btn:hover {
   background-color: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
 }
 
 .menu-btn svg {
   width: 24px;
   height: 24px;
-  stroke: #000;
+  stroke: #374151;
 }
 
 .header-title {
   font-size: 20px;
-  font-weight: 600;
-  color: #000;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .header-title {
+    font-size: 18px;
+  }
 }
 
 .spacer {
   width: 40px;
 }
 
+@media (max-width: 768px) {
+  .spacer {
+    width: 0;
+  }
+}
+
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 32px 24px;
+  overflow-x: hidden;
+  padding: 24px 16px;
   display: flex;
   justify-content: center;
-  background: #fff;
+  background: linear-gradient(to bottom, #f9fafb, #ffffff);
+}
+
+@media (min-width: 769px) {
+  .messages-container {
+    padding: 32px 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .messages-container {
+    padding: 40px 32px;
+  }
 }
 
 .messages-wrapper {
@@ -1146,9 +1193,27 @@ const handleForgotPassword = async () => {
   gap: 16px;
 }
 
+@media (min-width: 1024px) {
+  .messages-wrapper {
+    max-width: 800px;
+  }
+}
+
 .message-group {
   display: flex;
   margin-bottom: 8px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-group.user {
@@ -1156,40 +1221,57 @@ const handleForgotPassword = async () => {
 }
 
 .message-bubble {
-  max-width: 600px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  max-width: 85%;
+  padding: 14px 18px;
+  border-radius: 16px;
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.6;
   word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .message-bubble {
+    max-width: 90%;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+.message-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .message-group.bot .message-bubble {
-  background-color: #f9fafb;
-  color: #000;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  color: #1f2937;
   border: 1px solid #e5e7eb;
+  border-radius: 16px 16px 16px 4px;
 }
 
 .message-group.user .message-bubble {
-  background-color: #2563eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  border-radius: 16px 16px 4px 16px;
 }
 
 .typing-indicator {
   display: flex;
-  gap: 4px;
-  padding: 12px 16px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 16px 16px 16px 4px;
   width: fit-content;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .typing-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #999;
-  animation: bounce 1.4s infinite;
+  background-color: #6b7280;
+  animation: bounce 1.4s infinite ease-in-out;
 }
 
 .typing-dot:nth-child(1) {
@@ -1219,25 +1301,51 @@ const handleForgotPassword = async () => {
 }
 
 .input-area {
-  padding: 16px 24px 24px;
+  padding: 16px;
   border-top: 1px solid #e5e7eb;
-  background: #fff;
+  background: linear-gradient(to top, #ffffff, #f9fafb);
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 769px) {
+  .input-area {
+    padding: 20px 24px 24px;
+  }
 }
 
 .rag-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #dbeafe;
+  gap: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
   color: #1e40af;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@media (max-width: 768px) {
+  .rag-indicator {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
 }
 
 .input-wrapper {
@@ -1245,57 +1353,104 @@ const handleForgotPassword = async () => {
   width: 100%;
   display: flex;
   gap: 12px;
+  align-items: flex-end;
+}
+
+@media (min-width: 1024px) {
+  .input-wrapper {
+    max-width: 800px;
+  }
 }
 
 .input-field {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 14px 18px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   font-size: 15px;
   font-family: inherit;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   resize: none;
-  max-height: 100px;
+  max-height: 120px;
+  background: #fff;
+}
+
+@media (max-width: 768px) {
+  .input-field {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+.input-field:hover:not(:disabled) {
+  border-color: #d1d5db;
 }
 
 .input-field:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+}
+
+.input-field:disabled {
+  background-color: #f9fafb;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .send-btn {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   padding: 0;
-  background-color: #2563eb;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+@media (max-width: 768px) {
+  .send-btn {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .send-btn:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.send-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .send-btn:disabled {
-  background-color: #d1d5db;
+  background: #d1d5db;
   cursor: not-allowed;
   opacity: 0.5;
+  box-shadow: none;
 }
 
 .send-btn svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   stroke: white;
   stroke-width: 2;
+}
+
+@media (max-width: 768px) {
+  .send-btn svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 /* Bootstrap Modal Custom Styles */
@@ -1304,8 +1459,21 @@ const handleForgotPassword = async () => {
   max-width: 500px;
 }
 
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 0.5rem;
+    max-width: calc(100% - 1rem);
+  }
+}
+
 .modal-dialog.modal-lg {
   max-width: 800px;
+}
+
+@media (max-width: 768px) {
+  .modal-dialog.modal-lg {
+    max-width: calc(100% - 1rem);
+  }
 }
 
 .modal-dialog-centered {
@@ -1314,36 +1482,69 @@ const handleForgotPassword = async () => {
   min-height: calc(100% - 3.5rem);
 }
 
+@media (max-width: 768px) {
+  .modal-dialog-centered {
+    min-height: calc(100% - 1rem);
+  }
+}
+
 .modal-content {
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(0, 0, 0, 0.05);
   margin: 0 auto;
   width: 100%;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .modal-content {
+    border-radius: 12px;
+  }
 }
 
 .modal-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e9ecef;
-  background-color: #fff;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e5e7eb;
+  background: linear-gradient(to right, #fff, #f9fafb);
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 20px 20px;
+  }
 }
 
 .modal-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #111;
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+@media (max-width: 768px) {
+  .modal-title {
+    font-size: 18px;
+  }
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 28px;
   max-height: 70vh;
   overflow-y: auto;
 }
 
+@media (max-width: 768px) {
+  .modal-body {
+    padding: 20px;
+    max-height: 60vh;
+  }
+}
+
 .modal-body::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .modal-body::-webkit-scrollbar-track {
@@ -1351,23 +1552,25 @@ const handleForgotPassword = async () => {
 }
 
 .modal-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 3px;
+  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+  border-radius: 4px;
 }
 
 .modal-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
 .btn-close {
   padding: 8px;
   opacity: 0.5;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
+  border-radius: 8px;
 }
 
 .btn-close:hover {
   opacity: 1;
   transform: scale(1.1);
+  background-color: #f3f4f6;
 }
 
 .btn-close:focus {
@@ -1379,14 +1582,22 @@ const handleForgotPassword = async () => {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Form Input Styles - Modern Dark Theme */
+/* Form Input Styles - Modern Theme */
 .form-control {
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 15px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
   transition: all 0.2s ease;
   background-color: #fff;
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .form-control {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
 }
 
 .form-control:hover:not(:disabled) {
@@ -1394,10 +1605,10 @@ const handleForgotPassword = async () => {
 }
 
 .form-control:focus {
-  border-color: #111827;
+  border-color: #667eea;
   background-color: #fff;
-  outline: 2px solid #111827;
-  outline-offset: -1px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
 .form-control:disabled {
@@ -1411,42 +1622,77 @@ const handleForgotPassword = async () => {
 }
 
 .form-label {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
   color: #374151;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .form-label {
+    font-size: 13px;
+  }
+}
+
+.form-text {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+@media (max-width: 768px) {
+  .form-text {
+    font-size: 12px;
+  }
 }
 
 /* Alert Styles */
 .alert {
-  border-radius: 8px;
+  border-radius: 12px;
   border: none;
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .alert {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
 }
 
 .alert-danger {
-  background-color: #fef2f2;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   color: #dc2626;
   border-left: 4px solid #dc2626;
 }
 
 .alert-success {
-  background-color: #f0fdf4;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border-left: 4px solid #16a34a;
 }
 
 /* Forgot Password Link */
 .forgot-password-link {
-  color: #2563eb;
+  color: #667eea;
   text-decoration: none;
   font-size: 14px;
-  transition: color 0.2s ease;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 768px) {
+  .forgot-password-link {
+    font-size: 13px;
+  }
 }
 
 .forgot-password-link:hover {
-  color: #1d4ed8;
+  color: #764ba2;
   text-decoration: underline;
 }
 
@@ -1455,15 +1701,22 @@ const handleForgotPassword = async () => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  padding-top: 20px;
+  padding-top: 24px;
 }
 
-/* Button Styles - Modern Dark Theme */
+@media (max-width: 768px) {
+  .modal-footer {
+    padding-top: 20px;
+    gap: 10px;
+  }
+}
+
+/* Button Styles - Modern Theme */
 .btn {
-  padding: 10px 20px;
+  padding: 12px 24px;
   font-size: 15px;
-  font-weight: 500;
-  border-radius: 8px;
+  font-weight: 600;
+  border-radius: 12px;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
@@ -1471,62 +1724,76 @@ const handleForgotPassword = async () => {
   border: none;
   cursor: pointer;
   line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
 }
 
 .btn-primary {
-  background-color: #111827;
-  border: 1px solid #111827;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
   color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #000;
-  border-color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   color: #fff;
 }
 
 .btn-primary:active:not(:disabled) {
-  background-color: #1f2937;
-  border-color: #1f2937;
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
 .btn-primary:focus {
-  outline: 2px solid #374151;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
 }
 
 .btn-primary:disabled {
-  background-color: #6b7280;
-  border-color: #6b7280;
-  opacity: 0.5;
+  background: #d1d5db;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background-color: transparent;
-  border: 1px solid #e5e7eb;
+  background-color: #fff;
+  border: 2px solid #e5e7eb;
   color: #374151;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .btn-secondary:hover:not(:disabled) {
   background-color: #f9fafb;
   border-color: #d1d5db;
   color: #111827;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
 .btn-secondary:active:not(:disabled) {
   background-color: #f3f4f6;
   border-color: #9ca3af;
+  transform: translateY(0);
 }
 
 .btn-secondary:focus {
-  outline: 2px solid #d1d5db;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(209, 213, 219, 0.3);
 }
 
 .btn-secondary:disabled {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Spinner Styles */
@@ -1544,27 +1811,32 @@ const handleForgotPassword = async () => {
 }
 
 .password-input-wrapper .form-control {
-  padding-right: 48px;
+  padding-right: 52px;
 }
 
 .password-toggle-btn {
   position: absolute;
-  right: 12px;
+  right: 14px;
   background: none;
   border: none;
-  padding: 4px;
+  padding: 6px;
   cursor: pointer;
   color: #6b7280;
-  transition: color 0.2s ease;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .password-toggle-btn:hover:not(:disabled) {
   color: #374151;
   background-color: #f3f4f6;
+  transform: scale(1.05);
+}
+
+.password-toggle-btn:active:not(:disabled) {
+  transform: scale(0.95);
 }
 
 .password-toggle-btn:disabled {
@@ -1574,6 +1846,29 @@ const handleForgotPassword = async () => {
 
 .password-toggle-btn:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+/* Smooth scroll for messages container */
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+/* Add custom scrollbar for messages container */
+.messages-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
+  border-radius: 4px;
+}
+
+.messages-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 </style>
