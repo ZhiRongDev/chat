@@ -1,8 +1,16 @@
 <template>
   <div class="app-container">
     <!-- Sidebar -->
-    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId" @new-chat="newChat"
-      @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout" @show-modal="showModal" />
+    <Sidebar
+      :is-open="sidebarOpen"
+      :chat-histories="chatHistories"
+      :current-chat-id="currentChatId"
+      @new-chat="newChat"
+      @load-chat="loadChat"
+      @delete-chat="deleteChat"
+      @logout="handleLogout"
+      @show-modal="showModal"
+    />
 
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -10,7 +18,12 @@
       <div class="header">
         <button class="menu-btn" @click="toggleSidebar">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 6h16M4 12h16M4 18h16"
+            ></path>
           </svg>
         </button>
         <div class="header-title">ChatGPT</div>
@@ -20,7 +33,12 @@
       <!-- Messages -->
       <div class="messages-container">
         <div class="messages-wrapper">
-          <div v-for="(msg, index) in messages" :key="msg.id || index" class="message-group" :class="msg.sender">
+          <div
+            v-for="(msg, index) in messages"
+            :key="msg.id || index"
+            class="message-group"
+            :class="msg.sender"
+          >
             <div class="message-bubble">
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
@@ -42,21 +60,42 @@
       <!-- Input -->
       <div class="input-area">
         <div v-if="chatSettings.useRag" class="rag-indicator">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
-            </path>
+          <svg
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            style="width: 16px; height: 16px"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+            ></path>
           </svg>
           Gemini File Search RAG Active
         </div>
         <div class="input-wrapper">
-          <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
-            placeholder="Message ChatGPT..." :disabled="loading" />
-          <button @click="sendMessage" class="send-btn" :disabled="!currentMessage.trim() || loading">
+          <input
+            v-model="currentMessage"
+            @keypress.enter="sendMessage"
+            type="text"
+            class="input-field"
+            placeholder="Message ChatGPT..."
+            :disabled="loading"
+          />
+          <button
+            @click="sendMessage"
+            class="send-btn"
+            :disabled="!currentMessage.trim() || loading"
+          >
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8">
-              </path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              ></path>
             </svg>
           </button>
         </div>
@@ -64,9 +103,18 @@
     </div>
 
     <!-- Bootstrap Modal -->
-    <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
-      data-bs-keyboard="false">
-      <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
+    <div
+      class="modal fade"
+      id="appModal"
+      tabindex="-1"
+      aria-labelledby="appModalLabel"
+      aria-hidden="true"
+      data-bs-keyboard="false"
+    >
+      <div
+        class="modal-dialog modal-dialog-centered"
+        :class="{ 'modal-lg': modalType === 'documents' }"
+      >
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="appModalLabel">{{ modalTitle }}</h5>
@@ -82,13 +130,70 @@
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="login-username" class="form-label">Username</label>
-                  <input v-model="loginForm.username" type="text" class="form-control" id="login-username"
-                    placeholder="Enter your username" required :disabled="formLoading" />
+                  <input
+                    v-model="loginForm.username"
+                    type="text"
+                    class="form-control"
+                    id="login-username"
+                    placeholder="Enter your username"
+                    required
+                    :disabled="formLoading"
+                  />
                 </div>
                 <div class="mb-3">
                   <label for="login-password" class="form-label">Password</label>
-                  <input v-model="loginForm.password" type="password" class="form-control" id="login-password"
-                    placeholder="Enter your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="loginForm.password"
+                      :type="showLoginPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="login-password"
+                      placeholder="Enter your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showLoginPassword = !showLoginPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showLoginPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="mb-3 text-end">
                   <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordModal">
@@ -96,12 +201,21 @@
                   </a>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Logging in...' : 'Login' }}
                   </button>
                 </div>
@@ -121,26 +235,142 @@
               <form @submit.prevent="handleRegister">
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
-                  <input v-model="registerForm.username" type="text" class="form-control" id="register-username"
-                    placeholder="Enter your username" required :disabled="formLoading" />
+                  <input
+                    v-model="registerForm.username"
+                    type="text"
+                    class="form-control"
+                    id="register-username"
+                    placeholder="Enter your username"
+                    required
+                    :disabled="formLoading"
+                  />
                 </div>
                 <div class="mb-3">
                   <label for="register-password" class="form-label">Password</label>
-                  <input v-model="registerForm.password" type="password" class="form-control" id="register-password"
-                    placeholder="Enter your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="registerForm.password"
+                      :type="showRegisterPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="register-password"
+                      placeholder="Enter your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showRegisterPassword = !showRegisterPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showRegisterPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-confirm" class="form-label">Confirm Password</label>
-                  <input v-model="registerForm.confirmPassword" type="password" class="form-control"
-                    id="register-confirm" placeholder="Confirm your password" required :disabled="formLoading" />
+                  <div class="password-input-wrapper">
+                    <input
+                      v-model="registerForm.confirmPassword"
+                      :type="showRegisterConfirmPassword ? 'text' : 'password'"
+                      class="form-control"
+                      id="register-confirm"
+                      placeholder="Confirm your password"
+                      required
+                      :disabled="formLoading"
+                    />
+                    <button
+                      type="button"
+                      class="password-toggle-btn"
+                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword"
+                      :disabled="formLoading"
+                    >
+                      <svg
+                        v-if="!showRegisterConfirmPassword"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Registering...' : 'Register' }}
                   </button>
                 </div>
@@ -160,17 +390,35 @@
               <form @submit.prevent="handleForgotPassword">
                 <div class="mb-3">
                   <label for="forgot-username" class="form-label">Username (Email)</label>
-                  <input v-model="forgotPasswordForm.username" type="text" class="form-control mb-2" id="forgot-username"
-                    placeholder="Enter your username/email" required :disabled="formLoading" />
-                  <div class="form-text">We'll send a password reset link to your email address.</div>
+                  <input
+                    v-model="forgotPasswordForm.username"
+                    type="text"
+                    class="form-control mb-2"
+                    id="forgot-username"
+                    placeholder="Enter your username/email"
+                    required
+                    :disabled="formLoading"
+                  />
+                  <div class="form-text">
+                    We'll send a password reset link to your email address.
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    @click="closeModal"
+                    :disabled="formLoading"
+                  >
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
-                      aria-hidden="true"></span>
+                    <span
+                      v-if="formLoading"
+                      class="spinner-border spinner-border-sm me-2"
+                      role="status"
+                      aria-hidden="true"
+                    ></span>
                     {{ formLoading ? 'Sending...' : 'Send Reset Link' }}
                   </button>
                 </div>
@@ -187,7 +435,7 @@
 
           <!-- Document Manager -->
           <template v-if="modalType === 'documents'">
-            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto;">
+            <div class="modal-body p-0" style="max-height: 70vh; overflow-y: auto">
               <DocumentManager />
             </div>
           </template>
@@ -267,7 +515,7 @@ const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-let msgIdCounter = 2  // Temporary local counter for new messages (will be replaced with backend IDs)
+let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
 
 const loginForm = ref({
   username: '',
@@ -283,6 +531,11 @@ const registerForm = ref({
 const forgotPasswordForm = ref({
   username: '',
 })
+
+// Password visibility toggles
+const showLoginPassword = ref(false)
+const showRegisterPassword = ref(false)
+const showRegisterConfirmPassword = ref(false)
 
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
@@ -300,7 +553,7 @@ onMounted(async () => {
       // Redirect to reset password page
       router.push({
         path: '/reset-password',
-        query: { token, username }
+        query: { token, username },
       })
       return
     }
@@ -370,7 +623,8 @@ const sendMessage = async () => {
         // Update bot message with warning
         const botMessage = messages.value.find((msg) => msg.id === botMessageId)
         if (botMessage) {
-          botMessage.text = 'RAG mode requires authentication. Please log in to use document search. Continuing without RAG...\n\n'
+          botMessage.text =
+            'RAG mode requires authentication. Please log in to use document search. Continuing without RAG...\n\n'
         }
         // Don't add RAG parameters
       } else {
@@ -538,7 +792,7 @@ const saveCurrentChat = async () => {
     const title =
       firstUserMessage && firstUserMessage.text
         ? firstUserMessage.text.trim().substring(0, 50) +
-        (firstUserMessage.text.length > 50 ? '...' : '')
+          (firstUserMessage.text.length > 50 ? '...' : '')
         : 'New Chat'
 
     const savedChat = await chatApi.saveChatHistory({
@@ -680,6 +934,11 @@ const closeModal = () => {
   loginForm.value = { username: '', password: '' }
   registerForm.value = { username: '', password: '', confirmPassword: '' }
   forgotPasswordForm.value = { username: '' }
+
+  // Reset password visibility toggles
+  showLoginPassword.value = false
+  showRegisterPassword.value = false
+  showRegisterConfirmPassword.value = false
 
   // Hide Bootstrap modal
   if (bootstrapModal) {
@@ -946,7 +1205,6 @@ const handleForgotPassword = async () => {
 }
 
 @keyframes bounce {
-
   0%,
   60%,
   100% {
@@ -1276,5 +1534,46 @@ const handleForgotPassword = async () => {
   width: 16px;
   height: 16px;
   border-width: 2px;
+}
+
+/* Password Input Wrapper */
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper .form-control {
+  padding-right: 48px;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.password-toggle-btn:hover:not(:disabled) {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.password-toggle-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.password-toggle-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
 }
 </style>
