@@ -52,9 +52,8 @@ def test_register(client: TestClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert data["username"] == "newuser"
-    assert "id" in data
-    assert "password" not in data
+    assert "message" in data
+    assert "successful" in data["message"].lower()
 
 
 def test_register_duplicate_username(client: TestClient):
@@ -84,13 +83,18 @@ def test_register_duplicate_username(client: TestClient):
 def test_login(client: TestClient):
     """Test user login."""
     # First register a user
-    client.post(
-        "/api/v1/user/register",
-        json={
-            "username": "loginuser",
-            "password": "loginpass123",
-        },
+    from app.service.user_service import UserService
+    from app.model import User
+
+    user_service = UserService()
+    # Create a verified user directly
+    user = User(
+        username="loginuser",
+        password=user_service.hash_the_password("loginpass123"),
+        is_superuser=False,
+        is_verified=True,
     )
+    user_service.create_user(user)
 
     # Then try to login
     response = client.post(
@@ -197,13 +201,18 @@ def test_reset_password(client: TestClient):
 def test_get_current_user(client: TestClient):
     """Test getting current user info."""
     # Register and login
-    client.post(
-        "/api/v1/user/register",
-        json={
-            "username": "currentuser",
-            "password": "password123",
-        },
+    from app.service.user_service import UserService
+    from app.model import User
+
+    user_service = UserService()
+    # Create a verified user directly
+    user = User(
+        username="currentuser",
+        password=user_service.hash_the_password("password123"),
+        is_superuser=False,
+        is_verified=True,
     )
+    user_service.create_user(user)
 
     login_response = client.post(
         "/api/v1/user/login",

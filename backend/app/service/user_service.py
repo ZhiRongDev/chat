@@ -1,5 +1,5 @@
 from app.model.user_model import User
-from app.model import engine
+import app.model
 from sqlmodel import Session, select
 import bcrypt
 
@@ -9,7 +9,7 @@ class UserService:
 
     @staticmethod
     def create_user(user_to_create: User) -> User:
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             session.add(user_to_create)
             session.commit()
             session.refresh(user_to_create)
@@ -28,7 +28,7 @@ class UserService:
 
     @staticmethod
     def get_user_by_username(username: str) -> User | None:
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = select(User).where(User.username == username)
             result = session.exec(statement).first()  # fetch one row or None
         return result
@@ -36,7 +36,7 @@ class UserService:
     @staticmethod
     def update_user(user: User) -> User:
         """Update an existing user in the database."""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             session.add(user)
             session.commit()
             session.refresh(user)
