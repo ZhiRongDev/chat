@@ -13,6 +13,7 @@ describe('ChatSettings', () => {
     geminiApiKey: '',
     openaiApiKey: '',
     anthropicApiKey: '',
+    maxOutputTokens: 8192,
   }
 
   beforeEach(() => {
@@ -30,13 +31,19 @@ describe('ChatSettings', () => {
     expect(wrapper.text()).toContain('Chat Settings')
   })
 
-  it('displays RAG toggle', () => {
+  it('displays RAG toggle when logged in', () => {
+    // Mock localStorage to simulate logged-in state
+    localStorage.setItem('token', 'fake-token')
+
     const wrapper = mount(ChatSettings, {
       props: {
         modelValue: defaultSettings,
       },
     })
     expect(wrapper.text()).toContain('Enable RAG Mode')
+
+    // Clean up
+    localStorage.removeItem('token')
   })
 
   it('displays LLM provider selection', () => {
@@ -49,15 +56,21 @@ describe('ChatSettings', () => {
     expect(wrapper.find('select').exists()).toBe(true)
   })
 
-  it('shows RAG options when RAG is enabled', async () => {
+  it('shows RAG options when RAG is enabled and user is logged in', async () => {
+    // Mock localStorage to simulate logged-in state
+    localStorage.setItem('token', 'fake-token')
+
     const wrapper = mount(ChatSettings, {
       props: {
         modelValue: { ...defaultSettings, useRag: true },
       },
     })
 
-    expect(wrapper.text()).toContain('Top-K Results')
-    expect(wrapper.text()).toContain('Minimum Relevance Score')
+    // With the new Gemini File Search implementation, we should see Max Response Length instead
+    expect(wrapper.text()).toContain('Max Response Length')
+
+    // Clean up
+    localStorage.removeItem('token')
   })
 
   it('emits update event on save', async () => {

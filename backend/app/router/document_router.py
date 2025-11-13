@@ -15,7 +15,7 @@ from sqlmodel import Session
 from app.auth import get_current_user
 from app.model.user_model import User
 from app.model.document_model import Document, GeminiFileSearchStore
-from app.model import engine
+import app.model
 from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.config import settings
 
@@ -139,7 +139,7 @@ async def upload_document(
     try:
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
@@ -197,7 +197,7 @@ async def ingest_text(
     try:
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
@@ -273,7 +273,7 @@ async def ingest_url(
     try:
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
@@ -340,7 +340,7 @@ async def list_documents(
     # Don't require Gemini API key for listing documents (DB-only operation)
     gemini_service = GeminiFileSearchService(require_api_key=False)
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
@@ -386,7 +386,7 @@ async def get_document(
             detail="Invalid document_id format",
         )
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         document = session.get(Document, doc_id_int)
 
         if not document or document.user_id != current_user.id:
@@ -436,7 +436,7 @@ async def delete_document(
 
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         # Verify ownership
         document = session.get(Document, doc_id_int)
 
@@ -484,7 +484,7 @@ async def get_document_stats(
     """
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
@@ -526,7 +526,7 @@ async def get_user_store_info(
     """
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         store = gemini_service.get_or_create_user_store(session, current_user.id)
 
         return StoreInfoResponse(

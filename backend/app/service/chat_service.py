@@ -1,5 +1,5 @@
 from app.model.chat_model import ChatHistory, ChatMessage
-from app.model import engine
+import app.model
 from sqlmodel import Session, select, desc
 from typing import Optional
 from app.utils import get_timestamp
@@ -13,7 +13,7 @@ class ChatService:
         user_id: Optional[int], title: str
     ) -> ChatHistory:
         """Create a new chat history record"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             chat_history = ChatHistory(
                 user_id=user_id,
                 title=title,
@@ -30,7 +30,7 @@ class ChatService:
         chat_id: int, user_id: Optional[int] = None
     ) -> Optional[ChatHistory]:
         """Get a chat history by ID, optionally filtered by user_id"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = select(ChatHistory).where(ChatHistory.id == chat_id)
             if user_id is not None:
                 statement = statement.where(ChatHistory.user_id == user_id)
@@ -42,7 +42,7 @@ class ChatService:
         user_id: Optional[int] = None, limit: int = 100
     ) -> list[dict]:
         """Get all chat histories with message counts, optionally filtered by user_id, sorted by created_at (newest first)"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = select(ChatHistory).order_by(desc(ChatHistory.created_at)).limit(limit)
             if user_id is not None:
                 statement = statement.where(ChatHistory.user_id == user_id)
@@ -72,7 +72,7 @@ class ChatService:
         chat_id: int, title: Optional[str] = None, user_id: Optional[int] = None
     ) -> Optional[ChatHistory]:
         """Update a chat history record"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = select(ChatHistory).where(ChatHistory.id == chat_id)
             if user_id is not None:
                 statement = statement.where(ChatHistory.user_id == user_id)
@@ -93,7 +93,7 @@ class ChatService:
     @staticmethod
     def delete_chat_history(chat_id: int, user_id: Optional[int] = None) -> bool:
         """Delete a chat history and all its messages (cascade)"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = select(ChatHistory).where(ChatHistory.id == chat_id)
             if user_id is not None:
                 statement = statement.where(ChatHistory.user_id == user_id)
@@ -111,7 +111,7 @@ class ChatService:
         chat_id: int, sender: str, text: str, message_order: int
     ) -> ChatMessage:
         """Add a message to a chat history"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             message = ChatMessage(
                 chat_history_id=chat_id,
                 sender=sender,
@@ -126,7 +126,7 @@ class ChatService:
     @staticmethod
     def get_messages_by_chat_id(chat_id: int) -> list[ChatMessage]:
         """Get all messages for a chat history, ordered by message_order"""
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             statement = (
                 select(ChatMessage)
                 .where(ChatMessage.chat_history_id == chat_id)
@@ -155,7 +155,7 @@ class ChatService:
         Returns:
             ChatHistory object with messages
         """
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             if chat_id:
                 # Update existing chat
                 statement = select(ChatHistory).where(ChatHistory.id == chat_id)
