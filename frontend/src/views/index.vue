@@ -39,17 +39,18 @@
             class="message-group"
             :class="msg.sender"
           >
-            <div class="message-bubble">
+            <div
+              class="message-bubble"
+              :class="{ 'thinking': msg.sender === 'bot' && msg.id === streamingMessageId }"
+            >
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
-            </div>
-          </div>
-
-          <div v-if="loading" class="message-group bot">
-            <div class="typing-indicator">
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
+              <!-- Animated dots for thinking state -->
+              <span v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text" class="thinking-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
             </div>
           </div>
 
@@ -81,15 +82,26 @@
             @keypress.enter="sendMessage"
             type="text"
             class="input-field"
-            placeholder="Message ChatGPT..."
+            placeholder="Message Chat..."
             :disabled="loading"
           />
           <button
-            @click="sendMessage"
+            @click="loading ? stopMessage() : sendMessage()"
             class="send-btn"
-            :disabled="!currentMessage.trim() || loading"
+            :class="{ 'stop-btn': loading }"
+            :disabled="!loading && !currentMessage.trim()"
           >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Stop icon when loading -->
+            <svg v-if="loading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+            <!-- Send icon when not loading -->
+            <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -515,7 +527,9 @@ const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const streamingMessageId = ref<string | null>(null) // Track which message is currently streaming
 let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
+let abortController: AbortController | null = null // Controller to abort ongoing requests
 
 const loginForm = ref({
   username: '',
@@ -586,6 +600,14 @@ const scrollToBottom = async () => {
   }
 }
 
+const stopMessage = () => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+    loading.value = false
+  }
+}
+
 const sendMessage = async () => {
   if (!currentMessage.value.trim() || loading.value) return
 
@@ -599,10 +621,15 @@ const sendMessage = async () => {
 
   currentMessage.value = ''
   loading.value = true
+
+  // Create new AbortController for this request
+  abortController = new AbortController()
+
   await scrollToBottom()
 
   // Create a new bot message that will be updated with streaming response
   const botMessageId = String(msgIdCounter++)
+  streamingMessageId.value = botMessageId // Set streaming message ID for thinking animation
   messages.value.push({
     id: botMessageId,
     text: '',
@@ -671,11 +698,13 @@ const sendMessage = async () => {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal: abortController.signal,
     })
 
     // Ensure the response body is available and the request was successful
     if (!res.ok) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       // Try to parse error message from response
       let errorMessage = 'Sorry, there was an error processing your request.'
       try {
@@ -702,6 +731,7 @@ const sendMessage = async () => {
 
     if (!res.body) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       console.error('Response body is null')
       const botMessage = messages.value.find((msg) => msg.id === botMessageId)
       if (botMessage) {
@@ -739,22 +769,37 @@ const sendMessage = async () => {
     }
 
     loading.value = false
+    streamingMessageId.value = null // Clear streaming message ID
     await scrollToBottom()
 
     // Save chat after successful message exchange
     await saveCurrentChat()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending message:', error)
     loading.value = false
-    // Update bot message with error
-    const botMessage = messages.value.find((msg) => msg.id === botMessageId)
-    if (botMessage) {
-      botMessage.text = 'Sorry, there was an error connecting to the server.'
+    streamingMessageId.value = null // Clear streaming message ID
+
+    // Check if the request was aborted by user
+    if (error.name === 'AbortError') {
+      // Update bot message to indicate request was cancelled
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = botMessage.text || 'Request cancelled.'
+      }
+    } else {
+      // Update bot message with error
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = 'Sorry, there was an error connecting to the server.'
+      }
     }
     await scrollToBottom()
 
     // Save chat even on error
     await saveCurrentChat()
+  } finally {
+    // Clean up abort controller
+    abortController = null
   }
 }
 
@@ -1256,6 +1301,79 @@ const handleForgotPassword = async () => {
   border-radius: 16px 16px 4px 16px;
 }
 
+/* Thinking/Processing animation for bot messages */
+.message-bubble.thinking {
+  position: relative;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) padding-box,
+    linear-gradient(90deg, #667eea, #764ba2, #667eea) border-box;
+  background-size: 100%, 300% 100%;
+  animation: thinkingBorder 2s linear infinite, thinkingPulse 2s ease-in-out infinite;
+}
+
+@keyframes thinkingBorder {
+  0% {
+    background-position: 0% 0%, 0% 0%;
+  }
+  100% {
+    background-position: 0% 0%, 300% 0%;
+  }
+}
+
+@keyframes thinkingPulse {
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    transform: scale(1.01);
+  }
+}
+
+/* Thinking dots animation */
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #667eea;
+  animation: dotBounce 1.4s infinite ease-in-out;
+}
+
+.thinking-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
 .typing-indicator {
   display: flex;
   gap: 6px;
@@ -1413,6 +1531,15 @@ const handleForgotPassword = async () => {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.send-btn.stop-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.send-btn.stop-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 768px) {
