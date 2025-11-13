@@ -43,7 +43,11 @@ class MessageResponse(BaseModel):
 # While setting response_model, it will only return the fields specified in the model.
 @auth_router.get("/", response_model=UserResponse)
 async def user(current_user: User = Depends(get_current_user)):
-    return current_user
+    return UserResponse(
+        id=str(current_user.id),
+        username=current_user.username,
+        created_at=current_user.created_at
+    )
 
 
 @nonauth_router.post("/register", response_model=MessageResponse)

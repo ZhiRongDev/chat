@@ -8,7 +8,7 @@ from app.service.chat_service import ChatService
 from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
-from app.model import engine
+import app.model
 from app.auth import get_current_user, verify_access_token
 from app.service.user_service import UserService
 from sqlmodel import Session
@@ -191,7 +191,7 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
             gemini_service = GeminiFileSearchService()
 
             # Get File Search Store (user's store if authenticated, global store if not)
-            with Session(engine) as session:
+            with Session(app.model.engine) as session:
                 if current_user:
                     # Use user's personal store
                     store = gemini_service.get_or_create_user_store(session, current_user.id)
