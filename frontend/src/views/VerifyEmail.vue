@@ -73,7 +73,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userApi } from '@/api/user'
-import { appendAlert } from '@/utils/alert'
 
 const route = useRoute()
 const router = useRouter()
