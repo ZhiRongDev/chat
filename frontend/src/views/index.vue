@@ -39,17 +39,18 @@
             class="message-group"
             :class="msg.sender"
           >
-            <div class="message-bubble">
+            <div
+              class="message-bubble"
+              :class="{ 'thinking': msg.sender === 'bot' && msg.id === streamingMessageId }"
+            >
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
-            </div>
-          </div>
-
-          <div v-if="loading" class="message-group bot">
-            <div class="typing-indicator">
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
+              <!-- Animated dots for thinking state -->
+              <span v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text" class="thinking-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
             </div>
           </div>
 
@@ -81,15 +82,26 @@
             @keypress.enter="sendMessage"
             type="text"
             class="input-field"
-            placeholder="Message ChatGPT..."
+            placeholder="Message Chat..."
             :disabled="loading"
           />
           <button
-            @click="sendMessage"
+            @click="loading ? stopMessage() : sendMessage()"
             class="send-btn"
-            :disabled="!currentMessage.trim() || loading"
+            :class="{ 'stop-btn': loading }"
+            :disabled="!loading && !currentMessage.trim()"
           >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <!-- Stop icon when loading -->
+            <svg v-if="loading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+            <!-- Send icon when not loading -->
+            <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -131,25 +143,26 @@
                 <div class="mb-3">
                   <label for="login-username" class="form-label">Username</label>
                   <input
-                    v-model="loginForm.username"
+                    v-model="loginUsername"
                     type="text"
                     class="form-control"
                     id="login-username"
                     placeholder="Enter your username"
-                    required
                     :disabled="formLoading"
                   />
+                  <div v-if="loginErrors.username" class="invalid-feedback d-block">
+                    {{ loginErrors.username }}
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="login-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
                     <input
-                      v-model="loginForm.password"
+                      v-model="loginPassword"
                       :type="showLoginPassword ? 'text' : 'password'"
                       class="form-control"
                       id="login-password"
                       placeholder="Enter your password"
-                      required
                       :disabled="formLoading"
                     />
                     <button
@@ -194,6 +207,9 @@
                       </svg>
                     </button>
                   </div>
+                  <div v-if="loginErrors.password" class="invalid-feedback d-block">
+                    {{ loginErrors.password }}
+                  </div>
                 </div>
                 <div class="mb-3 text-end">
                   <a href="#" class="forgot-password-link" @click.prevent="showForgotPasswordModal">
@@ -236,25 +252,26 @@
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
                   <input
-                    v-model="registerForm.username"
+                    v-model="registerUsername"
                     type="text"
                     class="form-control"
                     id="register-username"
                     placeholder="Enter your username"
-                    required
                     :disabled="formLoading"
                   />
+                  <div v-if="registerErrors.username" class="invalid-feedback d-block">
+                    {{ registerErrors.username }}
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
                     <input
-                      v-model="registerForm.password"
+                      v-model="registerPassword"
                       :type="showRegisterPassword ? 'text' : 'password'"
                       class="form-control"
                       id="register-password"
                       placeholder="Enter your password"
-                      required
                       :disabled="formLoading"
                     />
                     <button
@@ -299,17 +316,19 @@
                       </svg>
                     </button>
                   </div>
+                  <div v-if="registerErrors.password" class="invalid-feedback d-block">
+                    {{ registerErrors.password }}
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-confirm" class="form-label">Confirm Password</label>
                   <div class="password-input-wrapper">
                     <input
-                      v-model="registerForm.confirmPassword"
+                      v-model="registerConfirmPassword"
                       :type="showRegisterConfirmPassword ? 'text' : 'password'"
                       class="form-control"
                       id="register-confirm"
                       placeholder="Confirm your password"
-                      required
                       :disabled="formLoading"
                     />
                     <button
@@ -354,6 +373,9 @@
                       </svg>
                     </button>
                   </div>
+                  <div v-if="registerErrors.confirmPassword" class="invalid-feedback d-block">
+                    {{ registerErrors.confirmPassword }}
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
                   <button
@@ -391,14 +413,16 @@
                 <div class="mb-3">
                   <label for="forgot-username" class="form-label">Username (Email)</label>
                   <input
-                    v-model="forgotPasswordForm.username"
+                    v-model="forgotPasswordUsername"
                     type="text"
                     class="form-control mb-2"
                     id="forgot-username"
                     placeholder="Enter your username/email"
-                    required
                     :disabled="formLoading"
                   />
+                  <div v-if="forgotPasswordErrors.username" class="invalid-feedback d-block">
+                    {{ forgotPasswordErrors.username }}
+                  </div>
                   <div class="form-text">
                     We'll send a password reset link to your email address.
                   </div>
@@ -457,6 +481,8 @@ import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { appendAlert } from '@/utils/alert'
 import { Modal } from 'bootstrap'
 import { useRoute, useRouter } from 'vue-router'
+import { useForm, useField } from 'vee-validate'
+import { loginSchema, registerSchema, forgotPasswordSchema } from '@/utils/validation'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -515,22 +541,42 @@ const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const streamingMessageId = ref<string | null>(null) // Track which message is currently streaming
 let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
+let abortController: AbortController | null = null // Controller to abort ongoing requests
 
-const loginForm = ref({
-  username: '',
-  password: '',
+// Login form validation
+const {
+  handleSubmit: handleLoginSubmit,
+  errors: loginErrors,
+  resetForm: resetLoginForm,
+} = useForm({
+  validationSchema: loginSchema,
 })
+const { value: loginUsername } = useField<string>('username')
+const { value: loginPassword } = useField<string>('password')
 
-const registerForm = ref({
-  username: '',
-  password: '',
-  confirmPassword: '',
+// Register form validation
+const {
+  handleSubmit: handleRegisterSubmit,
+  errors: registerErrors,
+  resetForm: resetRegisterForm,
+} = useForm({
+  validationSchema: registerSchema,
 })
+const { value: registerUsername } = useField<string>('username')
+const { value: registerPassword } = useField<string>('password')
+const { value: registerConfirmPassword } = useField<string>('confirmPassword')
 
-const forgotPasswordForm = ref({
-  username: '',
+// Forgot password form validation
+const {
+  handleSubmit: handleForgotPasswordSubmit,
+  errors: forgotPasswordErrors,
+  resetForm: resetForgotPasswordForm,
+} = useForm({
+  validationSchema: forgotPasswordSchema,
 })
+const { value: forgotPasswordUsername } = useField<string>('username')
 
 // Password visibility toggles
 const showLoginPassword = ref(false)
@@ -586,6 +632,14 @@ const scrollToBottom = async () => {
   }
 }
 
+const stopMessage = () => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+    loading.value = false
+  }
+}
+
 const sendMessage = async () => {
   if (!currentMessage.value.trim() || loading.value) return
 
@@ -599,10 +653,15 @@ const sendMessage = async () => {
 
   currentMessage.value = ''
   loading.value = true
+
+  // Create new AbortController for this request
+  abortController = new AbortController()
+
   await scrollToBottom()
 
   // Create a new bot message that will be updated with streaming response
   const botMessageId = String(msgIdCounter++)
+  streamingMessageId.value = botMessageId // Set streaming message ID for thinking animation
   messages.value.push({
     id: botMessageId,
     text: '',
@@ -671,11 +730,13 @@ const sendMessage = async () => {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
+      signal: abortController.signal,
     })
 
     // Ensure the response body is available and the request was successful
     if (!res.ok) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       // Try to parse error message from response
       let errorMessage = 'Sorry, there was an error processing your request.'
       try {
@@ -702,6 +763,7 @@ const sendMessage = async () => {
 
     if (!res.body) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       console.error('Response body is null')
       const botMessage = messages.value.find((msg) => msg.id === botMessageId)
       if (botMessage) {
@@ -739,22 +801,37 @@ const sendMessage = async () => {
     }
 
     loading.value = false
+    streamingMessageId.value = null // Clear streaming message ID
     await scrollToBottom()
 
     // Save chat after successful message exchange
     await saveCurrentChat()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending message:', error)
     loading.value = false
-    // Update bot message with error
-    const botMessage = messages.value.find((msg) => msg.id === botMessageId)
-    if (botMessage) {
-      botMessage.text = 'Sorry, there was an error connecting to the server.'
+    streamingMessageId.value = null // Clear streaming message ID
+
+    // Check if the request was aborted by user
+    if (error.name === 'AbortError') {
+      // Update bot message to indicate request was cancelled
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = botMessage.text || 'Request cancelled.'
+      }
+    } else {
+      // Update bot message with error
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = 'Sorry, there was an error connecting to the server.'
+      }
     }
     await scrollToBottom()
 
     // Save chat even on error
     await saveCurrentChat()
+  } finally {
+    // Clean up abort controller
+    abortController = null
   }
 }
 
@@ -908,7 +985,7 @@ const showModal = (type: string) => {
 const showForgotPasswordModal = () => {
   errorMessage.value = ''
   successMessage.value = ''
-  forgotPasswordForm.value = { username: '' }
+  resetForgotPasswordForm()
 
   // Close current modal and show forgot password modal
   if (bootstrapModal) {
@@ -931,9 +1008,9 @@ const closeModal = () => {
   errorMessage.value = ''
   successMessage.value = ''
   formLoading.value = false
-  loginForm.value = { username: '', password: '' }
-  registerForm.value = { username: '', password: '', confirmPassword: '' }
-  forgotPasswordForm.value = { username: '' }
+  resetLoginForm()
+  resetRegisterForm()
+  resetForgotPasswordForm()
 
   // Reset password visibility toggles
   showLoginPassword.value = false
@@ -946,19 +1023,14 @@ const closeModal = () => {
   }
 }
 
-const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    errorMessage.value = 'Please enter username and password'
-    return
-  }
-
+const handleLogin = handleLoginSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
 
     await userStore.login({
-      username: loginForm.value.username,
-      password: loginForm.value.password,
+      username: values.username,
+      password: values.password,
     })
 
     // Show success message
@@ -979,39 +1051,24 @@ const handleLogin = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 
-const handleRegister = async () => {
-  if (!registerForm.value.username || !registerForm.value.password) {
-    errorMessage.value = 'Please fill in all fields'
-    return
-  }
-
-  if (registerForm.value.password !== registerForm.value.confirmPassword) {
-    errorMessage.value = 'Passwords do not match!'
-    return
-  }
-
-  if (registerForm.value.password.length < 6) {
-    errorMessage.value = 'Password must be at least 6 characters long'
-    return
-  }
-
+const handleRegister = handleRegisterSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
     successMessage.value = ''
 
     const response = await userApi.register({
-      username: registerForm.value.username,
-      password: registerForm.value.password,
+      username: values.username,
+      password: values.password,
     })
 
     // Show success message - user needs to verify email
     successMessage.value = response.message
 
     // Clear form
-    registerForm.value = { username: '', password: '', confirmPassword: '' }
+    resetRegisterForm()
 
     // Close modal after 3 seconds
     setTimeout(() => {
@@ -1029,27 +1086,22 @@ const handleRegister = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 
-const handleForgotPassword = async () => {
-  if (!forgotPasswordForm.value.username) {
-    errorMessage.value = 'Please enter your username/email'
-    return
-  }
-
+const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
     successMessage.value = ''
 
     const response = await userApi.forgotPassword({
-      username: forgotPasswordForm.value.username,
+      username: values.username,
     })
 
     successMessage.value = response.message
 
     // Clear form
-    forgotPasswordForm.value.username = ''
+    resetForgotPasswordForm()
   } catch (error: any) {
     console.error('Forgot password error:', error)
     if (error.response?.data?.detail) {
@@ -1060,7 +1112,7 @@ const handleForgotPassword = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 </script>
 
 <style scoped>
@@ -1256,6 +1308,79 @@ const handleForgotPassword = async () => {
   border-radius: 16px 16px 4px 16px;
 }
 
+/* Thinking/Processing animation for bot messages */
+.message-bubble.thinking {
+  position: relative;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) padding-box,
+    linear-gradient(90deg, #667eea, #764ba2, #667eea) border-box;
+  background-size: 100%, 300% 100%;
+  animation: thinkingBorder 2s linear infinite, thinkingPulse 2s ease-in-out infinite;
+}
+
+@keyframes thinkingBorder {
+  0% {
+    background-position: 0% 0%, 0% 0%;
+  }
+  100% {
+    background-position: 0% 0%, 300% 0%;
+  }
+}
+
+@keyframes thinkingPulse {
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    transform: scale(1.01);
+  }
+}
+
+/* Thinking dots animation */
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #667eea;
+  animation: dotBounce 1.4s infinite ease-in-out;
+}
+
+.thinking-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
 .typing-indicator {
   display: flex;
   gap: 6px;
@@ -1413,6 +1538,15 @@ const handleForgotPassword = async () => {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.send-btn.stop-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.send-btn.stop-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 768px) {
@@ -1593,6 +1727,15 @@ const handleForgotPassword = async () => {
   font-family: inherit;
 }
 
+.form-control.is-invalid {
+  border-color: #dc2626;
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+}
+
 @media (max-width: 768px) {
   .form-control {
     padding: 12px 16px;
@@ -1674,6 +1817,21 @@ const handleForgotPassword = async () => {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border-left: 4px solid #16a34a;
+}
+
+/* Validation Feedback */
+.invalid-feedback {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .invalid-feedback {
+    font-size: 12px;
+    margin-top: 4px;
+  }
 }
 
 /* Forgot Password Link */
