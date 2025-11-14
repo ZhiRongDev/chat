@@ -22,9 +22,10 @@ cp .env.template .env
 ```
 
 **Required settings:**
+
 ```bash
 GEMINI_API_KEY=your-gemini-api-key-here
-GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp
+GEMINI_FILE_SEARCH_MODEL=gemini-2.5-flash-lite
 ```
 
 ## Step 2: Install Dependencies
@@ -44,6 +45,7 @@ alembic upgrade head
 ```
 
 This will:
+
 - Create `gemini_file_search_store` table
 - Update `document` table with Gemini fields
 - Remove old `document_chunk` and `vector_store_config` tables
@@ -56,6 +58,7 @@ python test_gemini_file_search.py
 ```
 
 Expected output:
+
 ```
 ============================================================
 Testing Gemini File Search Integration
@@ -70,11 +73,13 @@ Testing Gemini File Search Integration
 ## Step 5: Start the Application
 
 **Using Docker Compose:**
+
 ```bash
 docker-compose up --build
 ```
 
 **Or run locally:**
+
 ```bash
 # Backend
 cd backend
@@ -112,6 +117,7 @@ export TOKEN="your-access-token-here"
 ### 6.2 Upload a Document
 
 **Option A: Upload a file**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/upload \
   -H "Authorization: Bearer $TOKEN" \
@@ -119,6 +125,7 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 ```
 
 **Option B: Ingest text directly**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/ingest/text \
   -H "Authorization: Bearer $TOKEN" \
@@ -130,6 +137,7 @@ curl -X POST http://localhost:5000/api/v1/documents/ingest/text \
 ```
 
 **Option C: Ingest from URL**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/ingest/url \
   -H "Authorization: Bearer $TOKEN" \
@@ -165,6 +173,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 **Expected response:**
+
 ```
 Based on your documents, machine learning is a subset of artificial intelligence...
 
@@ -174,6 +183,7 @@ Based on your documents, machine learning is a subset of artificial intelligence
 ### 6.5 Compare: Regular Chat vs RAG
 
 **Regular chat (no documents):**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer $TOKEN" \
@@ -186,6 +196,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 **RAG chat (uses your documents):**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer $TOKEN" \
@@ -202,6 +213,7 @@ The RAG response will be based on your uploaded documents!
 ## Common Use Cases
 
 ### Academic Research
+
 ```bash
 # Upload research papers
 curl -X POST http://localhost:5000/api/v1/documents/upload \
@@ -219,6 +231,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 ### Technical Documentation
+
 ```bash
 # Upload documentation
 for doc in docs/*.md; do
@@ -238,6 +251,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 ### Code Knowledge Base
+
 ```bash
 # Ingest code documentation
 curl -X POST http://localhost:5000/api/v1/documents/ingest/text \
@@ -261,26 +275,32 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ## Troubleshooting
 
 ### Error: "No documents found in your knowledge base"
+
 **Solution**: Upload at least one document first.
 
 ### Error: "Gemini API key required for RAG mode"
+
 **Solution**: Set `GEMINI_API_KEY` in `.env` file.
 
 ### Error: "RAG mode currently only supports Gemini provider"
+
 **Solution**: Use `"provider": "gemini"` or omit the provider parameter.
 
 ### Migration from old system
+
 **Solution**: See [GEMINI_FILE_SEARCH_MIGRATION.md](backend/GEMINI_FILE_SEARCH_MIGRATION.md)
 
 ## Advanced Configuration
 
 ### Custom RAG Model
+
 ```bash
 # In .env
 GEMINI_FILE_SEARCH_MODEL=gemini-2.5-pro  # Use Pro model for better quality
 ```
 
 ### Adjust Response Length
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer $TOKEN" \
@@ -293,6 +313,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 ### Custom Temperature
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer $TOKEN" \

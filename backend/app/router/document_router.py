@@ -7,7 +7,7 @@ import os
 import tempfile
 import requests
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Header
 from pydantic import BaseModel, HttpUrl
 from typing import List, Optional
 from sqlmodel import Session
@@ -103,6 +103,7 @@ class StoreInfoResponse(BaseModel):
 async def upload_document(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Upload and ingest a document file to Gemini File Search
@@ -112,6 +113,7 @@ async def upload_document(
     Args:
         file: Document file to upload
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (overrides server config)
 
     Returns:
         Document upload response with metadata
@@ -137,7 +139,8 @@ async def upload_document(
         tmp_file_path = tmp_file.name
 
     try:
-        gemini_service = GeminiFileSearchService()
+        # Use user-provided API key if available, otherwise use server config
+        gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
         with Session(app.model.engine) as session:
             # Get or create user's file search store
@@ -177,6 +180,7 @@ async def upload_document(
 async def ingest_text(
     request: TextIngestionRequest,
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Ingest text content directly by creating a temporary file
@@ -184,6 +188,7 @@ async def ingest_text(
     Args:
         request: Text ingestion request
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (overrides server config)
 
     Returns:
         Document upload response
@@ -195,7 +200,8 @@ async def ingest_text(
         tmp_file_path = tmp_file.name
 
     try:
-        gemini_service = GeminiFileSearchService()
+        # Use user-provided API key if available, otherwise use server config
+        gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
         with Session(app.model.engine) as session:
             # Get or create user's file search store
@@ -238,6 +244,7 @@ async def ingest_text(
 async def ingest_url(
     request: URLIngestionRequest,
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Ingest content from a URL by downloading and uploading to Gemini
@@ -245,6 +252,7 @@ async def ingest_url(
     Args:
         request: URL ingestion request
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (overrides server config)
 
     Returns:
         Document upload response
@@ -271,7 +279,8 @@ async def ingest_url(
         )
 
     try:
-        gemini_service = GeminiFileSearchService()
+        # Use user-provided API key if available, otherwise use server config
+        gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
         with Session(app.model.engine) as session:
             # Get or create user's file search store
@@ -415,6 +424,7 @@ async def get_document(
 async def delete_document(
     document_id: str,
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Delete a document from Gemini File Search and database
@@ -422,6 +432,7 @@ async def delete_document(
     Args:
         document_id: Document ID
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (overrides server config)
 
     Returns:
         Success message
@@ -434,7 +445,8 @@ async def delete_document(
             detail="Invalid document_id format",
         )
 
-    gemini_service = GeminiFileSearchService()
+    # Use user-provided API key if available, otherwise use server config
+    gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
     with Session(app.model.engine) as session:
         # Verify ownership
@@ -482,7 +494,8 @@ async def get_document_stats(
     Returns:
         Document statistics
     """
-    gemini_service = GeminiFileSearchService()
+    # Don't require Gemini API key for stats (DB-only operation)
+    gemini_service = GeminiFileSearchService(require_api_key=False)
 
     with Session(app.model.engine) as session:
         documents = gemini_service.list_documents(
@@ -514,17 +527,20 @@ async def get_document_stats(
 @auth_router.get("/stores/info", response_model=StoreInfoResponse)
 async def get_user_store_info(
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Get information about user's File Search Store
 
     Args:
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (overrides server config)
 
     Returns:
         Store information
     """
-    gemini_service = GeminiFileSearchService()
+    # Use user-provided API key if available, otherwise use server config
+    gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
     with Session(app.model.engine) as session:
         store = gemini_service.get_or_create_user_store(session, current_user.id)

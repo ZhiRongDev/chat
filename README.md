@@ -15,17 +15,18 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ## Tech Stack
 
 ### Required
-* FastAPI
-* Typescript
-* PostgresSQL
-* JWT
-* Nginx
-* Langchain, Langgraph
-* Docker
-* Deploy on AWS
-* Redis
-* SocketIO for processing progress.
-* Database migration.
+
+- FastAPI
+- Typescript
+- PostgresSQL
+- JWT
+- Nginx
+- Langchain, Langgraph
+- Docker
+- Deploy on AWS
+- Redis
+- SocketIO for processing progress.
+- Database migration.
 
 ---
 
@@ -40,12 +41,14 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ### Option 1: Docker (Recommended)
 
 #### 1. Clone the Repository
+
 ```bash
 git clone <repository-url>
 cd chat
 ```
 
 #### 2. Set Up Environment Variables
+
 ```bash
 # Copy the environment template
 cp backend/.env.template .env
@@ -55,6 +58,7 @@ nano .env  # or use your preferred editor
 ```
 
 **Required configuration in `.env`:**
+
 ```bash
 # Database (use these values for Docker)
 DB_HOST=db
@@ -71,16 +75,19 @@ ANTHROPIC_API_KEY=your-anthropic-api-key-here  # Optional
 #### 3. Start the Application
 
 **For Development (with hot reload):**
+
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 **For Production:**
+
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 ```
 
 #### 4. Access the Application
+
 - **Frontend**: http://localhost:5173 (dev) or http://localhost:80 (prod)
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
@@ -88,6 +95,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 - **Redis**: localhost:6379
 
 #### 5. Stop the Application
+
 ```bash
 # Development
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
@@ -119,6 +127,7 @@ nano .env  # Configure for local development
 ```
 
 **Configure `.env` for local development:**
+
 ```bash
 DB_HOST=localhost
 REDIS_HOST=localhost
@@ -126,6 +135,7 @@ REDIS_HOST=localhost
 ```
 
 **Start PostgreSQL and Redis locally:**
+
 ```bash
 # Using Docker for just the databases
 docker run -d -p 5432:5432 \
@@ -141,6 +151,7 @@ docker run -d -p 6379:6379 \
 ```
 
 **Run the backend:**
+
 ```bash
 # Development mode (with auto-reload)
 python main.py
@@ -165,11 +176,13 @@ cp .env.example .env  # If exists, or create manually
 ```
 
 **Create `frontend/.env`:**
+
 ```bash
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
 **Run the frontend:**
+
 ```bash
 # Development mode (with hot reload)
 npm run dev
@@ -180,6 +193,7 @@ npm run preview
 ```
 
 #### 3. Access the Application
+
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
@@ -226,13 +240,17 @@ chat/
 Hot reload is **automatically enabled** in development mode:
 
 #### Backend Hot Reload
+
 The backend uses Python's `watchfiles` to automatically reload on code changes:
+
 - **What triggers reload**: Any `.py` file changes in `backend/`
 - **Volume mount**: `./backend:/app/backend`
 - **Startup command**: `python main.py` (configured with `--reload` in `main.py`)
 
 #### Frontend Hot Reload
+
 The frontend uses Vite's built-in HMR (Hot Module Replacement):
+
 - **What triggers reload**: Any file changes in `frontend/src/`
 - **Volume mount**: `./frontend:/app/frontend`
 - **Startup command**: `npm run dev -- --host 0.0.0.0`
@@ -257,17 +275,20 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f frontend
 This project is configured to run **without GPU/CUDA** by default:
 
 #### Environment Variables Set
+
 ```bash
 CUDA_VISIBLE_DEVICES=     # Empty = no GPU visible
 TORCH_DEVICE=cpu          # Force CPU execution
 ```
 
 #### Where It's Configured
+
 1. **Dockerfile** ([docker/backend/Dockerfile](docker/backend/Dockerfile:10-11)): Set at build time
 2. **.env.template** ([backend/.env.template](backend/.env.template:5-7)): For local development
 3. **docker-compose.dev.yml** ([docker-compose.dev.yml](docker-compose.dev.yml:35-37)): Runtime override
 
 #### Libraries Using CPU
+
 - **FAISS**: Using `faiss-cpu` package (not `faiss-gpu`)
 - **Sentence Transformers**: Will use CPU due to `TORCH_DEVICE=cpu`
 - **ChromaDB**: CPU-only by default
@@ -275,6 +296,7 @@ TORCH_DEVICE=cpu          # Force CPU execution
 ### Working with the Database
 
 #### Access PostgreSQL Database
+
 ```bash
 # Via Docker
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec db psql -U postgres -d chat_dev
@@ -284,6 +306,7 @@ psql -h localhost -U postgres -d chat_dev
 ```
 
 #### View Database Tables
+
 ```sql
 \dt                          -- List all tables
 SELECT * FROM users;         -- View users
@@ -292,6 +315,7 @@ SELECT * FROM chat_history;  -- View chat history
 ```
 
 #### Reset Database
+
 ```bash
 # Stop containers and remove volumes
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
@@ -303,6 +327,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ### Working with Redis
 
 #### Access Redis CLI
+
 ```bash
 # Via Docker
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec redis redis-cli
@@ -316,12 +341,14 @@ FLUSHALL         # Clear all data (use with caution!)
 ### API Development
 
 #### API Documentation
+
 - **Swagger UI**: http://localhost:5000/docs
 - **ReDoc**: http://localhost:5000/redoc
 
 #### Test API Endpoints
 
 **Register a user:**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/user/ \
   -H "Content-Type: application/json" \
@@ -333,6 +360,7 @@ curl -X POST http://localhost:5000/api/v1/user/ \
 ```
 
 **Login:**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -340,6 +368,7 @@ curl -X POST http://localhost:5000/api/v1/token \
 ```
 
 **Chat (with token):**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Content-Type: application/json" \
@@ -351,6 +380,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 **Upload document:**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/upload \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
@@ -362,10 +392,11 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 The application uses Google Gemini File Search for RAG functionality. Configuration is automatic:
 
 Edit `.env`:
+
 ```bash
 # Gemini API Key (required for RAG)
 GEMINI_API_KEY=your-gemini-api-key-here
-GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp  # Model for RAG queries
+GEMINI_FILE_SEARCH_MODEL=gemini-2.5-flash-lite  # Model for RAG queries
 GEMINI_STORE_SIZE_LIMIT_GB=20                   # Recommended store size
 GEMINI_MAX_FILE_SIZE_MB=100                     # Max upload size
 ```
@@ -375,6 +406,7 @@ For detailed RAG usage, see [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI
 ### Testing
 
 #### Backend Tests
+
 ```bash
 cd backend
 pytest                          # Run all tests
@@ -384,6 +416,7 @@ pytest --cov                    # With coverage
 ```
 
 #### Frontend Tests
+
 ```bash
 cd frontend
 
@@ -401,6 +434,7 @@ npm run test:e2e -- --project=chromium  # Specific browser
 ### Debugging
 
 #### View Logs
+
 ```bash
 # All services
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f
@@ -414,6 +448,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs --tail=100 b
 ```
 
 #### Check Service Health
+
 ```bash
 # Check if services are running
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps
@@ -426,6 +461,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend pyth
 ```
 
 #### Enter Container Shell
+
 ```bash
 # Backend
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend bash
@@ -440,6 +476,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec db bash
 ### Common Issues & Solutions
 
 #### Port Already in Use
+
 ```bash
 # Find process using port
 lsof -i :5000  # or :5173, :5432, :6379
@@ -451,6 +488,7 @@ kill -9 <PID>
 ```
 
 #### Database Connection Failed
+
 ```bash
 # Check if PostgreSQL is running
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps db
@@ -462,6 +500,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs db
 ```
 
 #### Module Not Found Errors
+
 ```bash
 # Rebuild containers
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -472,6 +511,7 @@ docker system prune -a
 ```
 
 #### Hot Reload Not Working
+
 ```bash
 # Ensure volumes are mounted correctly in docker-compose.dev.yml
 # Check logs for file watcher errors
@@ -487,11 +527,13 @@ sudo sysctl -p
 ## Production Deployment
 
 ### Build for Production
+
 ```bash
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 ```
 
 ### Production Checklist
+
 - [ ] Change `SECRET_KEY` in `.env` to a strong random value
 - [ ] Set proper `FRONTEND_HOST` for CORS
 - [ ] Configure firewall/security groups

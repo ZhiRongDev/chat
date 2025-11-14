@@ -7,8 +7,6 @@ anyio==4.11.0
 asn1crypto==1.5.1
 attrs==25.4.0
 bcrypt==5.0.0
-boto3==1.40.45
-botocore==1.40.45
 cachetools==6.2.0
 certifi==2025.10.5
 cffi==1.17.1
@@ -20,7 +18,6 @@ defusedxml==0.7.1
 distro==1.9.0
 dnspython==2.8.0
 docstring_parser==0.17.0
-email-validator==2.3.0
 fastapi==0.118.0
 fastapi-cli==0.0.13
 fastapi-cloud-cli==0.3.0
@@ -34,7 +31,6 @@ google-auth==2.41.1
 google-auth-httplib2==0.2.1
 google-auth-oauthlib==1.2.3
 google-genai==1.49.0
-google_search_results==2.4.2
 googleapis-common-protos==1.70.0
 greenlet==3.2.4
 grpcio==1.75.1
@@ -86,10 +82,8 @@ pyparsing==3.2.5
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
 python-multipart==0.0.20
-pytokens==0.1.10
 pytz==2025.2
 PyYAML==6.0.3
-redis==6.4.0
 regex==2025.9.18
 requests==2.32.5
 requests-oauthlib==2.0.0
@@ -98,16 +92,11 @@ rich==14.1.0
 rich-toolkit==0.15.1
 rignore==0.7.0
 rsa==4.9.1
-s3transfer==0.14.0
-sentry-sdk==2.39.0
 shellingham==1.5.4
 six==1.17.0
 sniffio==1.3.1
 snowflake==1.8.0
-snowflake-connector-python==3.17.4
 snowflake-id==1.0.2
-snowflake._legacy==1.0.2
-snowflake.core==1.8.0
 sortedcontainers==2.4.0
 SQLAlchemy==2.0.43
 sqlmodel==0.0.25

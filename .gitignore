@@ -3,6 +3,7 @@ token.json
 credentials.json
 
 .env
+.env.backup
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

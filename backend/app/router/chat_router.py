@@ -8,15 +8,20 @@ from app.service.chat_service import ChatService
 from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
+from app.model.document_model import Document
 import app.model
 from app.auth import get_current_user, verify_access_token
 from app.service.user_service import UserService
-from sqlmodel import Session
+from sqlmodel import Session, select
 import asyncio
+import logging
 
 
 nonauth_router = APIRouter(prefix="/chat", tags=["chat"])
 auth_router = APIRouter(prefix="/chat", tags=["chat"])
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class ChatPayload(BaseModel):
@@ -98,11 +103,77 @@ async def chat_stream(
             if username:
                 user_service = UserService()
                 current_user = user_service.get_user_by_username(username)
-        except Exception:
+        except Exception as e:
             # If token is invalid, just treat as non-authenticated
+            logger.debug(f"Failed to authenticate user from token: {str(e)}")
             pass
 
     return await _chat_stream_internal(payload, current_user=current_user)
+
+
+def _extract_document_references(grounding_metadata, session: Session) -> list[dict]:
+    """
+    Extract document references from Gemini grounding metadata
+
+    Args:
+        grounding_metadata: Grounding metadata from Gemini response
+        session: Database session
+
+    Returns:
+        List of document info dicts with filename, file_type, etc.
+    """
+    if not grounding_metadata:
+        return []
+
+    document_refs = []
+    seen_file_ids = set()
+
+    try:
+        # Extract grounding chunks which contain document references
+        if hasattr(grounding_metadata, 'grounding_chunks'):
+            for chunk in grounding_metadata.grounding_chunks:
+                # Check if this is a retrieved context (from file search)
+                if hasattr(chunk, 'retrieved_context'):
+                    retrieved = chunk.retrieved_context
+
+                    # Extract URI which contains the file ID
+                    if hasattr(retrieved, 'uri'):
+                        uri = retrieved.uri
+                        # URI format: "fileSearchStores/{store_id}/documents/{file_id}"
+                        # Extract the file_id from URI
+                        if '/documents/' in uri:
+                            file_id_part = uri.split('/documents/')[-1]
+
+                            # Skip if we've already processed this file
+                            if file_id_part in seen_file_ids:
+                                continue
+                            seen_file_ids.add(file_id_part)
+
+                            # Query database for document details using gemini_file_id
+                            # The gemini_file_id in DB should match the full document path
+                            stmt = select(Document).where(
+                                Document.gemini_file_id.contains(file_id_part)
+                            )
+                            doc = session.exec(stmt).first()
+
+                            if doc:
+                                document_refs.append({
+                                    'filename': doc.filename,
+                                    'file_type': doc.file_type,
+                                    'file_size': doc.file_size,
+                                })
+                            else:
+                                # Fallback: Use title from retrieved context if available
+                                title = retrieved.title if hasattr(retrieved, 'title') else 'Unknown Document'
+                                document_refs.append({
+                                    'filename': title,
+                                    'file_type': 'unknown',
+                                    'file_size': 0,
+                                })
+    except Exception as e:
+        logger.error(f"Error extracting document references: {e}")
+
+    return document_refs
 
 
 async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[User] = None):
@@ -188,7 +259,8 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
                     detail="Gemini API key required for RAG mode. Please provide via gemini_api_key or configure in environment.",
                 )
 
-            gemini_service = GeminiFileSearchService()
+            # Initialize Gemini service with user-provided API key (if available)
+            gemini_service = GeminiFileSearchService(api_key=payload.gemini_api_key)
 
             # Get File Search Store (user's store if authenticated, global store if not)
             with Session(app.model.engine) as session:
@@ -233,12 +305,42 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
                             await asyncio.sleep(0.01)  # Small delay for streaming effect
                             yield char.encode("utf-8")
 
-                        # Optionally append citation info if available
+                        # Extract and format document references if available
                         if result.get('grounding_metadata'):
-                            citations_msg = "\n\n[Sources: Retrieved from your documents]"
-                            for char in citations_msg:
-                                await asyncio.sleep(0.01)
-                                yield char.encode("utf-8")
+                            # Extract document references from grounding metadata
+                            document_refs = _extract_document_references(
+                                result['grounding_metadata'],
+                                session
+                            )
+
+                            if document_refs:
+                                # Format document references
+                                citations_msg = "\n\n---\n\n**📚 Referenced Documents:**\n\n"
+                                for idx, doc_ref in enumerate(document_refs, 1):
+                                    filename = doc_ref['filename']
+                                    file_type = doc_ref['file_type'].upper()
+
+                                    # Format file size
+                                    file_size = doc_ref['file_size']
+                                    if file_size < 1024:
+                                        size_str = f"{file_size} B"
+                                    elif file_size < 1024 * 1024:
+                                        size_str = f"{file_size / 1024:.1f} KB"
+                                    else:
+                                        size_str = f"{file_size / (1024 * 1024):.1f} MB"
+
+                                    citations_msg += f"{idx}. **{filename}** ({file_type}, {size_str})\n"
+
+                                # Stream the formatted citations
+                                for char in citations_msg:
+                                    await asyncio.sleep(0.005)  # Faster streaming for citations
+                                    yield char.encode("utf-8")
+                            else:
+                                # Generic fallback if we can't extract specific documents
+                                citations_msg = "\n\n---\n\n*📄 This response was generated using information from your uploaded documents.*"
+                                for char in citations_msg:
+                                    await asyncio.sleep(0.005)
+                                    yield char.encode("utf-8")
 
                     except Exception as e:
                         error_msg = f"Error during RAG generation: {str(e)}"

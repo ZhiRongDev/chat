@@ -14,6 +14,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
 class CreateAccessTokenPayload(BaseModel):
     sub: str  # username
     reset: bool = False  # Flag for password reset tokens
+    verify: bool = False  # Flag for email verification tokens
 
 
 class VerifyAccessTokenReturn(BaseModel):

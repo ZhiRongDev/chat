@@ -5,10 +5,12 @@ This guide explains the migration from the old RAG system (FAISS/ChromaDB) to Go
 ## Overview
 
 ### What Changed
+
 - **Old System**: Manual chunking, embedding, and vector store management with FAISS/ChromaDB
 - **New System**: Google Gemini File Search handles everything automatically
 
 ### Why Migrate
+
 1. **Simplified Architecture**: ~1,180 lines of code removed (40% reduction)
 2. **Reduced Dependencies**: Removed 5 packages (FAISS, ChromaDB, tiktoken, etc.)
 3. **Lower Costs**: No embedding API costs, only indexing ($0.15/1M tokens)
@@ -20,6 +22,7 @@ This guide explains the migration from the old RAG system (FAISS/ChromaDB) to Go
 ### 1. Update Environment Variables
 
 **Old `.env`:**
+
 ```bash
 EMBEDDING_PROVIDER=openai
 EMBEDDING_MODEL=text-embedding-3-small
@@ -31,9 +34,10 @@ RAG_MIN_SCORE=0.3
 ```
 
 **New `.env`:**
+
 ```bash
 GEMINI_API_KEY=your-gemini-api-key-here         # Required
-GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp
+GEMINI_FILE_SEARCH_MODEL=gemini-2.5-flash-lite
 GEMINI_STORE_SIZE_LIMIT_GB=20
 GEMINI_MAX_FILE_SIZE_MB=100
 ```
@@ -41,17 +45,20 @@ GEMINI_MAX_FILE_SIZE_MB=100
 ### 2. Run Database Migration
 
 The migration will:
+
 - Add Gemini-related columns to `document` table
 - Create `gemini_file_search_store` table
 - Drop `document_chunk` and `vector_store_config` tables
 
 **Using Alembic:**
+
 ```bash
 cd backend
 alembic upgrade head
 ```
 
 **Manual migration:**
+
 ```sql
 -- The migration file is at: alembic/versions/001_migrate_to_gemini_file_search.py
 -- It can be applied manually or via Alembic
@@ -60,11 +67,13 @@ alembic upgrade head
 ### 3. Install/Remove Dependencies
 
 **Remove old packages:**
+
 ```bash
 pip uninstall faiss-cpu chromadb tiktoken sentence-transformers langchain-chroma
 ```
 
 **Install from updated requirements.txt:**
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -79,6 +88,7 @@ The old vector store data is not compatible with Gemini File Search. Users need 
 2. Upload documents again using the new API
 
 **Migration script example:**
+
 ```python
 # This is a conceptual script - adapt as needed
 from app.model import engine
@@ -112,6 +122,7 @@ def migrate_user_documents(user_id: int):
 ### 5. Update Client Code
 
 **Old API call:**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Content-Type: application/json" \
@@ -124,6 +135,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 **New API call (requires authentication):**
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer <token>" \
@@ -136,6 +148,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 **Key changes:**
+
 - ✅ Authentication now required (`Authorization: Bearer <token>`)
 - ✅ Must specify `provider: "gemini"` or omit (defaults to gemini for RAG)
 - ❌ Removed: `top_k`, `min_score` parameters (Gemini handles this)
@@ -146,6 +159,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ### Document Endpoints (No breaking changes)
 
 All document endpoints remain the same:
+
 - `POST /api/v1/documents/upload` - Upload files
 - `POST /api/v1/documents/ingest/text` - Ingest text
 - `POST /api/v1/documents/ingest/url` - Ingest from URL
@@ -154,6 +168,7 @@ All document endpoints remain the same:
 - `DELETE /api/v1/documents/{id}` - Delete document
 
 **New endpoint:**
+
 - `GET /api/v1/documents/stores/info` - Get user's File Search Store info
 
 ### Chat Endpoint Changes
@@ -161,6 +176,7 @@ All document endpoints remain the same:
 **Breaking change:** RAG mode now requires authentication.
 
 **Old (non-authenticated):**
+
 ```python
 @nonauth_router.post("/")
 async def chat_stream(payload: ChatPayload):
@@ -168,6 +184,7 @@ async def chat_stream(payload: ChatPayload):
 ```
 
 **New (authenticated):**
+
 ```python
 @auth_router.post("/")
 async def chat_stream(payload: ChatPayload, current_user: User = Depends(get_current_user)):
@@ -177,6 +194,7 @@ async def chat_stream(payload: ChatPayload, current_user: User = Depends(get_cur
 ### Response Format
 
 **New response includes citations:**
+
 ```
 Your answer based on the documents...
 
@@ -188,6 +206,7 @@ The `grounding_metadata` provides details about which documents were used.
 ## Architecture Changes
 
 ### Files Removed
+
 ```
 backend/app/service/rag/
 ├── __init__.py
@@ -201,6 +220,7 @@ backend/app/service/rag/
 ```
 
 ### Files Added
+
 ```
 backend/app/service/
 └── gemini_file_search_service.py  (~450 lines)
@@ -209,40 +229,44 @@ backend/app/service/
 ### Database Schema Changes
 
 **Added to `document` table:**
+
 - `gemini_file_id` - Gemini File API ID
 - `gemini_store_id` - File Search Store ID
 - `gemini_mime_type` - MIME type
 - `gemini_metadata` - Custom metadata
 
 **Removed from `document` table:**
+
 - `chunk_count`
 
 **Tables dropped:**
+
 - `document_chunk`
 - `vector_store_config`
 
 **New table:**
+
 - `gemini_file_search_store`
 
 ## Configuration Reference
 
 ### Gemini File Search Settings
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `GEMINI_API_KEY` | None | **Required** - Gemini API key |
-| `GEMINI_FILE_SEARCH_MODEL` | `gemini-2.0-flash-exp` | Model for RAG queries |
-| `GEMINI_STORE_SIZE_LIMIT_GB` | 20 | Recommended store size limit |
-| `GEMINI_MAX_FILE_SIZE_MB` | 100 | Max file upload size |
+| Setting                      | Default                 | Description                   |
+| ---------------------------- | ----------------------- | ----------------------------- |
+| `GEMINI_API_KEY`             | None                    | **Required** - Gemini API key |
+| `GEMINI_FILE_SEARCH_MODEL`   | `gemini-2.5-flash-lite` | Model for RAG queries         |
+| `GEMINI_STORE_SIZE_LIMIT_GB` | 20                      | Recommended store size limit  |
+| `GEMINI_MAX_FILE_SIZE_MB`    | 100                     | Max file upload size          |
 
 ### Rate Limits by Tier
 
-| Tier | Storage Limit |
-|------|---------------|
-| Free | 1 GB |
-| Tier 1 | 10 GB |
-| Tier 2 | 100 GB |
-| Tier 3 | 1 TB |
+| Tier   | Storage Limit |
+| ------ | ------------- |
+| Free   | 1 GB          |
+| Tier 1 | 10 GB         |
+| Tier 2 | 100 GB        |
+| Tier 3 | 1 TB          |
 
 **Recommendation**: Keep each File Search Store under 20 GB for optimal performance.
 
@@ -258,6 +282,7 @@ backend/app/service/
 ### Issue: "No documents found in your knowledge base"
 
 **Solution**: Upload documents first before using RAG:
+
 ```bash
 curl -X POST http://localhost:5000/api/v1/documents/upload \
   -H "Authorization: Bearer <token>" \
@@ -267,6 +292,7 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 ### Issue: "RAG mode currently only supports Gemini provider"
 
 **Solution**: Use `provider: "gemini"` or omit the provider parameter:
+
 ```json
 {
   "message": "your question",
@@ -278,6 +304,7 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 ### Issue: "Gemini API key required for RAG mode"
 
 **Solution**: Set `GEMINI_API_KEY` in your `.env` file or provide it in the request:
+
 ```json
 {
   "message": "your question",
@@ -289,6 +316,7 @@ curl -X POST http://localhost:5000/api/v1/documents/upload \
 ### Issue: Migration failed / Database errors
 
 **Solution**: Check if you have existing data that conflicts:
+
 ```bash
 # Rollback migration
 alembic downgrade -1
@@ -302,6 +330,7 @@ alembic upgrade head
 ## Testing the Migration
 
 ### 1. Test Document Upload
+
 ```bash
 # Upload a test document
 curl -X POST http://localhost:5000/api/v1/documents/upload \
@@ -314,6 +343,7 @@ curl -X GET http://localhost:5000/api/v1/documents/ \
 ```
 
 ### 2. Test RAG Query
+
 ```bash
 # Query with RAG
 curl -X POST http://localhost:5000/api/v1/chat/ \
@@ -326,6 +356,7 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 ```
 
 ### 3. Test Store Info
+
 ```bash
 # Get store information
 curl -X GET http://localhost:5000/api/v1/documents/stores/info \
@@ -337,22 +368,26 @@ curl -X GET http://localhost:5000/api/v1/documents/stores/info \
 If you need to rollback to the old system:
 
 1. **Rollback database migration:**
+
 ```bash
 alembic downgrade -1
 ```
 
 2. **Restore old RAG service files from git:**
+
 ```bash
 git checkout HEAD -- backend/app/service/rag/
 ```
 
 3. **Restore old requirements.txt:**
+
 ```bash
 git checkout HEAD -- backend/requirements.txt
 pip install -r requirements.txt
 ```
 
 4. **Restore old configuration:**
+
 ```bash
 git checkout HEAD -- backend/app/config.py
 git checkout HEAD -- backend/.env.template
@@ -361,6 +396,7 @@ git checkout HEAD -- backend/.env.template
 ## Support
 
 For issues or questions:
+
 1. Check the [Gemini File Search API documentation](https://ai.google.dev/gemini-api/docs/file-search)
 2. Review the code in [gemini_file_search_service.py](app/service/gemini_file_search_service.py)
 3. Open an issue in the project repository

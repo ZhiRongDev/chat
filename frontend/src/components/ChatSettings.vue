@@ -30,7 +30,7 @@
           type="text"
           class="form-control"
           id="model"
-          placeholder="e.g., gpt-4, gemini-pro, gemini-2.0-flash-exp"
+          placeholder="e.g., gpt-4, gemini-pro, gemini-2.5-flash-lite"
         />
         <small class="text-muted"> Leave empty to use provider's default model </small>
       </div>
