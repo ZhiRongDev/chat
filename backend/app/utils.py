@@ -55,8 +55,20 @@ def get_gmail_credentials():
 
 
 def send_reset_email(to_email: str, subject: str, reset_link: str):
-    """Send an email with HTML content via Gmail API using OAuth2"""
-    creds = get_gmail_credentials()
+    """Send an email with HTML content via Gmail API using OAuth2
+
+    Returns:
+        dict or None: Email send result if successful, None if email not configured or failed
+    """
+    if not settings.FROM_EMAIL:
+        logger.warning("FROM_EMAIL not configured. Skipping password reset email.")
+        return None
+
+    try:
+        creds = get_gmail_credentials()
+    except Exception as e:
+        logger.error(f"Failed to get Gmail credentials: {e}")
+        return None
 
     try:
         service = build("gmail", "v1", credentials=creds)
@@ -104,8 +116,20 @@ def send_reset_email(to_email: str, subject: str, reset_link: str):
 
 
 def send_verification_email(to_email: str, subject: str, verification_link: str):
-    """Send a verification email via Gmail API using OAuth2"""
-    creds = get_gmail_credentials()
+    """Send a verification email via Gmail API using OAuth2
+
+    Returns:
+        dict or None: Email send result if successful, None if email not configured or failed
+    """
+    if not settings.FROM_EMAIL:
+        logger.warning("FROM_EMAIL not configured. Skipping verification email.")
+        return None
+
+    try:
+        creds = get_gmail_credentials()
+    except Exception as e:
+        logger.error(f"Failed to get Gmail credentials: {e}")
+        return None
 
     try:
         service = build("gmail", "v1", credentials=creds)
