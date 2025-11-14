@@ -8,15 +8,20 @@ from app.service.chat_service import ChatService
 from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
+from app.model.document_model import Document
 import app.model
 from app.auth import get_current_user, verify_access_token
 from app.service.user_service import UserService
 from sqlmodel import Session, select
 import asyncio
+import logging
 
 
 nonauth_router = APIRouter(prefix="/chat", tags=["chat"])
 auth_router = APIRouter(prefix="/chat", tags=["chat"])
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class ChatPayload(BaseModel):
@@ -98,8 +103,9 @@ async def chat_stream(
             if username:
                 user_service = UserService()
                 current_user = user_service.get_user_by_username(username)
-        except Exception:
+        except Exception as e:
             # If token is invalid, just treat as non-authenticated
+            logger.debug(f"Failed to authenticate user from token: {str(e)}")
             pass
 
     return await _chat_stream_internal(payload, current_user=current_user)
@@ -165,7 +171,7 @@ def _extract_document_references(grounding_metadata, session: Session) -> list[d
                                     'file_size': 0,
                                 })
     except Exception as e:
-        print(f"Error extracting document references: {e}")
+        logger.error(f"Error extracting document references: {e}")
 
     return document_refs
 
@@ -253,7 +259,8 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
                     detail="Gemini API key required for RAG mode. Please provide via gemini_api_key or configure in environment.",
                 )
 
-            gemini_service = GeminiFileSearchService()
+            # Initialize Gemini service with user-provided API key (if available)
+            gemini_service = GeminiFileSearchService(api_key=payload.gemini_api_key)
 
             # Get File Search Store (user's store if authenticated, global store if not)
             with Session(app.model.engine) as session:

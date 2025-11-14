@@ -5,9 +5,12 @@ from starlette.middleware.cors import CORSMiddleware
 import app.model
 
 import os
+import logging
 from contextlib import asynccontextmanager
 from app.utils import set_snowflake_generator
 from snowflake import SnowflakeGenerator
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -16,7 +19,7 @@ async def lifespan(app: FastAPI):
     worker_id = os.getpid() % 1024
     gen = SnowflakeGenerator(worker_id)
     set_snowflake_generator(gen)
-    print(
+    logger.info(
         f"Worker PID {os.getpid()} snowflake generator initialized with worker id {worker_id}"
     )
     yield
@@ -25,12 +28,16 @@ async def lifespan(app: FastAPI):
 
 
 def create_app():
-    app = FastAPI(lifespan=lifespan, debug=True)
+    # Use environment variable for debug mode, default to False for production
+    debug_mode = os.environ.get("DEBUG", "false").lower() == "true"
+    app = FastAPI(lifespan=lifespan, debug=debug_mode)
 
     # Add CORS **before** routers
+    # In production, restrict to frontend host only
+    allowed_origins = os.environ.get("ALLOWED_ORIGINS", settings.FRONTEND_HOST).split(",")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # or ["*"] for testing
+        allow_origins=allowed_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

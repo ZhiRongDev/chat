@@ -19,7 +19,7 @@ os.environ.setdefault("FRONTEND_HOST", "http://localhost:5173")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only")
 os.environ.setdefault("EXPIRES_DELTA", "30")
 os.environ.setdefault("DEFAULT_LLM_PROVIDER", "gemini")
-os.environ.setdefault("GEMINI_FILE_SEARCH_MODEL", "gemini-2.0-flash-exp")
+os.environ.setdefault("GEMINI_FILE_SEARCH_MODEL", "gemini-2.5-flash-lite")
 os.environ.setdefault("GEMINI_STORE_SIZE_LIMIT_GB", "20")
 os.environ.setdefault("GEMINI_MAX_FILE_SIZE_MB", "100")
 

@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     TOKEN_FILE: str = "app/service/gmail/token.json"
     CREDENTIALS_FILE: str = "app/service/gmail/credentials.json"
     SCOPES: list[str] = ["https://www.googleapis.com/auth/gmail.send"]
-    FROM_EMAIL: str = "jordan990301@gmail.com"
+    FROM_EMAIL: str  # Email address to send from (must be configured in .env)
     RESET_TOKEN_EXPIRE_MINUTES: int = 60
 
 

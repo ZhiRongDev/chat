@@ -1,6 +1,6 @@
-import redis
 from app.config import settings
 from datetime import datetime, timezone
+import logging
 
 ### Gmail email API
 import os
@@ -11,6 +11,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+logger = logging.getLogger(__name__)
 
 _snowflake_gen = None
 
@@ -93,11 +95,11 @@ def send_reset_email(to_email: str, subject: str, reset_link: str):
         send_result = (
             service.users().messages().send(userId="me", body=create_message).execute()
         )
-        print(f"✅ Message sent. ID: {send_result['id']}")
+        logger.info(f"Password reset email sent. ID: {send_result['id']}")
         return send_result
 
     except HttpError as error:
-        print(f"❌ An error occurred: {error}")
+        logger.error(f"Error sending password reset email: {error}")
         return None
 
 
@@ -144,9 +146,9 @@ def send_verification_email(to_email: str, subject: str, verification_link: str)
         send_result = (
             service.users().messages().send(userId="me", body=create_message).execute()
         )
-        print(f"✅ Verification email sent. ID: {send_result['id']}")
+        logger.info(f"Verification email sent. ID: {send_result['id']}")
         return send_result
 
     except HttpError as error:
-        print(f"❌ An error occurred: {error}")
+        logger.error(f"Error sending verification email: {error}")
         return None

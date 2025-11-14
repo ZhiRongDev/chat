@@ -41,12 +41,15 @@
           >
             <div
               class="message-bubble"
-              :class="{ 'thinking': msg.sender === 'bot' && msg.id === streamingMessageId }"
+              :class="{ thinking: msg.sender === 'bot' && msg.id === streamingMessageId }"
             >
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
               <!-- Animated dots for thinking state -->
-              <span v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text" class="thinking-dots">
+              <span
+                v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text"
+                class="thinking-dots"
+              >
                 <span class="dot"></span>
                 <span class="dot"></span>
                 <span class="dot"></span>
@@ -1253,7 +1256,6 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 
 .message-group {
   display: flex;
-  margin-bottom: 8px;
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -1281,6 +1283,7 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
   word-wrap: break-word;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 768px) {
@@ -1315,16 +1318,24 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
   background:
     linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) padding-box,
     linear-gradient(90deg, #667eea, #764ba2, #667eea) border-box;
-  background-size: 100%, 300% 100%;
-  animation: thinkingBorder 2s linear infinite, thinkingPulse 2s ease-in-out infinite;
+  background-size:
+    100%,
+    300% 100%;
+  animation:
+    thinkingBorder 2s linear infinite,
+    thinkingPulse 2s ease-in-out infinite;
 }
 
 @keyframes thinkingBorder {
   0% {
-    background-position: 0% 0%, 0% 0%;
+    background-position:
+      0% 0%,
+      0% 0%;
   }
   100% {
-    background-position: 0% 0%, 300% 0%;
+    background-position:
+      0% 0%,
+      300% 0%;
   }
 }
 

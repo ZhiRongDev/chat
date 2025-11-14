@@ -8,6 +8,7 @@ import os
 import hashlib
 import mimetypes
 import time
+import logging
 from typing import Optional
 from pathlib import Path
 
@@ -19,22 +20,28 @@ from app.config import settings
 from app.model.document_model import Document, GeminiFileSearchStore
 from app.utils import get_timestamp
 
+logger = logging.getLogger(__name__)
+
 
 class GeminiFileSearchService:
     """Service for managing Gemini File Search Stores and documents"""
 
-    def __init__(self, require_api_key: bool = True):
+    def __init__(self, api_key: Optional[str] = None, require_api_key: bool = True):
         """
         Initialize Gemini API client
 
         Args:
+            api_key: Optional API key to use (overrides settings.GEMINI_API_KEY)
             require_api_key: If True, raises error if API key not configured.
                            If False, allows initialization without API key (for DB-only operations)
         """
         self.client = None
 
-        if settings.GEMINI_API_KEY:
-            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        # Use provided API key first, then fall back to settings
+        effective_api_key = api_key or settings.GEMINI_API_KEY
+
+        if effective_api_key:
+            self.client = genai.Client(api_key=effective_api_key)
         elif require_api_key:
             raise ValueError("GEMINI_API_KEY not configured")
 
@@ -198,7 +205,7 @@ class GeminiFileSearchService:
                     config={'force': True}
                 )
             except Exception as e:
-                print(f"Error deleting Gemini store: {e}")
+                logger.error(f"Error deleting Gemini store: {e}")
 
         # Mark as inactive in database
         store.is_active = False
@@ -371,7 +378,7 @@ class GeminiFileSearchService:
                 self._ensure_client()
                 self.client.files.delete(name=document.gemini_file_id)
             except Exception as e:
-                print(f"Error deleting from Gemini: {e}")
+                logger.error(f"Error deleting from Gemini: {e}")
 
         # Update store statistics
         if document.gemini_store_id:

@@ -44,6 +44,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ### Backend Changes
 
 **Removed Dependencies:**
+
 - ❌ FAISS CPU (`faiss-cpu`)
 - ❌ ChromaDB (`chromadb`)
 - ❌ Tiktoken (`tiktoken`)
@@ -51,11 +52,13 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - ❌ Langchain Chroma (`langchain-chroma`)
 
 **Simplified Configuration:**
+
 - ❌ Removed: `CUDA_VISIBLE_DEVICES`, `TORCH_DEVICE` (no longer needed)
 - ❌ Removed: Vector store volume mounts
 - ✅ Added: Gemini File Search service
 
 **Docker Changes:**
+
 1. [docker/backend/Dockerfile](docker/backend/Dockerfile) - Removed PyTorch/CUDA environment variables
 2. [docker-compose.dev.yml](docker-compose.dev.yml) - Removed vector store volume mounts
 3. Backend now ~40% lighter and faster to build
@@ -63,12 +66,14 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ### Frontend Changes
 
 **API Updates:**
+
 1. RAG mode now requires authentication (`Authorization: Bearer <token>`)
 2. Removed parameters: `top_k`, `min_score`
 3. Added parameter: `max_output_tokens` (512-8192)
 4. Document responses include `gemini_file_id` field
 
 **UI Updates:**
+
 1. [ChatSettings.vue](frontend/src/components/ChatSettings.vue) - Updated for Gemini File Search
 2. RAG indicator shows "Gemini File Search RAG Active"
 3. Settings panel shows info about automatic optimization
@@ -191,6 +196,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml logs -f
 ### 3. Production Configuration
 
 Production mode uses:
+
 - **Nginx** for frontend (port 80)
 - **Gunicorn** for backend (port 5000)
 - Optimized builds
@@ -262,7 +268,7 @@ SERPER_API_KEY=your-serper-key
 TAVILY_API_KEY=your-tavily-key
 
 # Gemini File Search Settings
-GEMINI_FILE_SEARCH_MODEL=gemini-2.0-flash-exp
+GEMINI_FILE_SEARCH_MODEL=gemini-2.5-flash-lite
 GEMINI_STORE_SIZE_LIMIT_GB=20
 GEMINI_MAX_FILE_SIZE_MB=100
 
@@ -366,16 +372,19 @@ make rebuild
 ### If upgrading from FAISS/ChromaDB:
 
 1. **Backup existing data**:
+
    ```bash
    make backup
    ```
 
 2. **Run migration**:
+
    ```bash
    docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec backend alembic upgrade head
    ```
 
 3. **Re-upload documents**:
+
    - Old vector store data is not compatible
    - Users must re-upload documents via the UI or API
 
@@ -414,6 +423,7 @@ docker system prune -a   # Clean Docker system
 ## Support
 
 For issues or questions:
+
 1. Check [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI_FILE_SEARCH.md)
 2. Review [GEMINI_FILE_SEARCH_MIGRATION.md](backend/GEMINI_FILE_SEARCH_MIGRATION.md)
 3. Consult [CLAUDE.md](CLAUDE.md)
