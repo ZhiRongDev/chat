@@ -4,29 +4,61 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 
 ## Features
 
+### Core Features
 - **RAG-Enhanced Chat**: Chat with AI using standard LLM responses or RAG-enhanced responses with document context
-- **Document Management**: Upload and manage PDF, TXT, and Markdown documents
-- **Multi-Provider LLM Support**: Gemini, OpenAI, and Anthropic
-- **Gemini File Search**: Automatic document indexing, embedding, and semantic retrieval
+- **LangGraph Agent System**: Multi-step reasoning with integrated search capabilities (Google via Serper, Tavily Search)
+- **Document Management**: Upload and manage PDF, TXT, Markdown, DOCX, JSON, CSV, and more
+- **Multi-Provider LLM Support**: Gemini, OpenAI, and Anthropic with user-provided API key option
+- **Gemini File Search**: Automatic document indexing, embedding, and semantic retrieval with per-user stores
+
+### Authentication & Security
 - **User Authentication**: JWT-based authentication with bcrypt password hashing
-- **Real-time Updates**: Hot reload for development
-- **Dockerized**: Easy deployment with Docker Compose
+- **Email Verification**: Required email verification for new user accounts via Gmail API
+- **Password Reset**: Secure password reset flow with email-based JWT tokens
+- **Optional Authentication**: Chat endpoint works with or without authentication
+
+### Development & Deployment
+- **Real-time Updates**: Hot reload for development (frontend and backend)
+- **Database Migrations**: Alembic-based migration system for schema changes
+- **Form Validation**: VeeValidate with Yup schemas for robust input validation
+- **Internationalization**: Multi-language support (English, Traditional Chinese) via vue-i18n
+- **Comprehensive Testing**: pytest (backend), Vitest (frontend unit), Playwright (E2E)
+- **CI/CD Pipeline**: Automated testing, linting, security scanning, and build checks
+- **Dockerized**: Easy deployment with Docker Compose (dev and production modes)
+- **Utility Scripts**: Makefile and shell scripts for common operations
 
 ## Tech Stack
 
-### Required
+### Backend
+- **Framework**: FastAPI with Uvicorn/Gunicorn
+- **Database**: PostgreSQL 16 with SQLModel ORM
+- **Cache**: Redis 7
+- **Authentication**: JWT tokens with bcrypt password hashing
+- **AI/ML**:
+  - LLM Providers: Gemini, OpenAI, Anthropic (via Langchain)
+  - Agent Framework: LangGraph for multi-step reasoning
+  - RAG: Gemini File Search API
+  - Search Tools: Serper (Google Search), Tavily Search
+- **Email**: Gmail API for verification and password reset
+- **Migrations**: Alembic for database schema management
+- **Testing**: pytest with coverage
 
-- FastAPI
-- Typescript
-- PostgresSQL
-- JWT
-- Nginx
-- Langchain, Langgraph
-- Docker
-- Deploy on AWS
-- Redis
-- SocketIO for processing progress.
-- Database migration.
+### Frontend
+- **Framework**: Vue 3.5 with TypeScript 5.9
+- **Build Tool**: Vite 7.1
+- **State Management**: Pinia 3.0
+- **Routing**: Vue Router 4.5
+- **UI Framework**: Bootstrap 5.3 with Bootstrap Icons
+- **Form Validation**: VeeValidate 4.15 with Yup
+- **Markdown**: Marked 17.0 with Highlight.js 11.11 for code highlighting
+- **Internationalization**: vue-i18n with English and Traditional Chinese
+- **Testing**: Vitest (unit), Playwright (E2E)
+
+### Infrastructure
+- **Containerization**: Docker with Docker Compose
+- **Web Server**: Nginx (production)
+- **CI/CD**: GitHub Actions with automated testing, linting, security scanning
+- **Deployment**: AWS-ready with health checks and monitoring
 
 ---
 
@@ -69,6 +101,15 @@ GEMINI_API_KEY=your-gemini-api-key-here
 OPENAI_API_KEY=your-openai-api-key-here  # Optional
 ANTHROPIC_API_KEY=your-anthropic-api-key-here  # Optional
 
+# Search API Keys (for LangGraph agent)
+SERPER_API_KEY=your-serper-api-key-here  # Optional: Google Search via Serper
+TAVILY_API_KEY=your-tavily-api-key-here  # Optional: Tavily Search
+
+# Gmail API (for email verification and password reset)
+GMAIL_CREDENTIALS_PATH=app/service/gmail/credentials.json
+GMAIL_TOKEN_PATH=app/service/gmail/token.json
+SENDER_EMAIL=your-email@gmail.com
+
 # Other settings can use defaults from template
 ```
 
@@ -105,6 +146,32 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml down
 
 # Remove volumes (WARNING: deletes all data)
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
+```
+
+#### 6. Using the Makefile (Convenient Alternative)
+
+The project includes a Makefile for easier management:
+
+```bash
+# Development
+make dev          # Start development environment
+make logs         # View logs (all services)
+make health       # Check service health
+
+# Testing
+make test         # Run all tests (backend + frontend)
+
+# Production
+make prod         # Start production environment
+
+# Database
+make backup       # Backup PostgreSQL database
+make restore      # Restore PostgreSQL database
+
+# Cleanup
+make stop         # Stop all services
+make clean        # Remove containers and volumes
+make rebuild      # Clean rebuild of all services
 ```
 
 ### Option 2: Local Development (Without Docker)
@@ -206,33 +273,79 @@ npm run preview
 
 ```
 chat/
-├── backend/              # FastAPI backend
+├── backend/                     # FastAPI backend
+│   ├── alembic/                 # Database migrations
+│   │   └── versions/            # Migration scripts
 │   ├── app/
-│   │   ├── model/       # SQLModel database models
-│   │   ├── router/      # API route handlers
-│   │   ├── service/     # Business logic
-│   │   │   ├── llm/     # LLM service providers
-│   │   │   └── gemini_file_search_service.py  # Gemini File Search RAG
-│   │   ├── auth.py      # JWT authentication
-│   │   └── config.py    # Settings & configuration
-│   ├── data/            # Application data
-│   ├── main.py          # Application entry point
-│   └── requirements.txt
-├── frontend/            # Vue 3 frontend
+│   │   ├── model/               # SQLModel database models
+│   │   │   ├── user_model.py    # User with email verification
+│   │   │   ├── chat_model.py    # Chat history and messages
+│   │   │   └── document_model.py # Documents and Gemini stores
+│   │   ├── router/              # API route handlers
+│   │   │   ├── user_router.py   # Auth, verification, password reset
+│   │   │   ├── chat_router.py   # Chat with RAG support
+│   │   │   └── document_router.py # Document management
+│   │   ├── service/             # Business logic
+│   │   │   ├── llm/             # LLM services
+│   │   │   │   ├── agent_graph.py      # LangGraph agent
+│   │   │   │   ├── llm_factory.py      # Multi-provider factory
+│   │   │   │   └── search_tools.py     # Serper/Tavily search
+│   │   │   ├── gmail/           # Email services
+│   │   │   ├── user_service.py  # User CRUD
+│   │   │   ├── chat_service.py  # Chat management
+│   │   │   └── gemini_file_search_service.py  # RAG service
+│   │   ├── auth.py              # JWT authentication
+│   │   ├── config.py            # Settings & configuration
+│   │   └── utils.py             # Snowflake ID generation
+│   ├── tests/                   # pytest test suite
+│   ├── data/                    # Application data
+│   ├── main.py                  # Application entry point
+│   ├── requirements.txt         # Python dependencies
+│   └── alembic.ini              # Alembic configuration
+├── frontend/                    # Vue 3 frontend
 │   ├── src/
-│   │   ├── api/         # API client
-│   │   ├── components/  # Vue components
-│   │   ├── router/      # Vue Router
-│   │   ├── stores/      # Pinia state management
-│   │   └── views/       # Page components
-│   └── package.json
-├── docker/              # Dockerfiles
+│   │   ├── api/                 # API client services
+│   │   ├── components/          # Vue components
+│   │   │   ├── ChatSettings.vue
+│   │   │   ├── DocumentManager.vue
+│   │   │   ├── MarkdownRenderer.vue
+│   │   │   └── Sidebar.vue
+│   │   ├── locale/              # i18n translations (en, zh-TW)
+│   │   ├── router/              # Vue Router configuration
+│   │   ├── stores/              # Pinia state management
+│   │   ├── utils/               # Utilities (i18n, locale)
+│   │   ├── views/               # Page components
+│   │   │   ├── index.vue        # Main chat interface
+│   │   │   ├── VerifyEmail.vue
+│   │   │   ├── ResetPassword.vue
+│   │   │   └── NotFound.vue
+│   │   └── __tests__/           # Vitest unit tests
+│   ├── e2e/                     # Playwright E2E tests
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── playwright.config.ts
+├── docker/                      # Dockerfiles
 │   ├── backend/
 │   └── frontend/
+├── scripts/                     # Utility scripts
+│   ├── dev.sh                   # Start development
+│   ├── prod.sh                  # Start production
+│   ├── logs.sh                  # View logs
+│   ├── health-check.sh          # Health checks
+│   ├── db-backup.sh             # Database backup
+│   └── db-restore.sh            # Database restore
+├── .github/workflows/           # CI/CD pipelines
+│   ├── ci.yml                   # Main CI pipeline
+│   └── docker-build.yml         # Docker builds
 ├── docker-compose.yml           # Base compose config
 ├── docker-compose.dev.yml       # Development overrides
 ├── docker-compose.prod.yml      # Production overrides
-└── README.md
+├── Makefile                     # Convenience commands
+├── README.md                    # This file
+├── CLAUDE.md                    # Claude Code guide
+├── TESTING.md                   # Testing documentation
+├── DOCKER_SETUP.md              # Docker deployment guide
+└── QUICKSTART_GEMINI_FILE_SEARCH.md  # RAG quick start
 ```
 
 ### Hot Reload Configuration
@@ -367,7 +480,7 @@ curl -X POST http://localhost:5000/api/v1/token \
   -d "username=testuser&password=password123"
 ```
 
-**Chat (with token):**
+**Chat (with authentication):**
 
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
@@ -375,7 +488,34 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -d '{
     "message": "Hello, how are you?",
-    "use_rag": false
+    "use_rag": false,
+    "provider": "gemini"
+  }'
+```
+
+**Chat (without authentication, using user-provided API key):**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "What is machine learning?",
+    "use_rag": false,
+    "provider": "gemini",
+    "gemini_api_key": "your-gemini-api-key-here"
+  }'
+```
+
+**Chat with RAG (requires authentication for personal document store):**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/chat/ \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -d '{
+    "message": "What does my document say about X?",
+    "use_rag": true,
+    "provider": "gemini"
   }'
 ```
 
@@ -385,6 +525,26 @@ curl -X POST http://localhost:5000/api/v1/chat/ \
 curl -X POST http://localhost:5000/api/v1/documents/upload \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -F "file=@path/to/document.pdf"
+```
+
+**Email verification:**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/user/verify-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "JWT_TOKEN_FROM_EMAIL"
+  }'
+```
+
+**Password reset request:**
+
+```bash
+curl -X POST http://localhost:5000/api/v1/user/request-password-reset \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com"
+  }'
 ```
 
 ### RAG Configuration
@@ -405,31 +565,79 @@ For detailed RAG usage, see [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI
 
 ### Testing
 
-#### Backend Tests
+The project has comprehensive testing across multiple levels. For detailed testing documentation, see [TESTING.md](TESTING.md).
+
+#### Backend Tests (pytest)
 
 ```bash
 cd backend
-pytest                          # Run all tests
-pytest tests/test_auth.py       # Run specific test file
-pytest -v                       # Verbose output
-pytest --cov                    # With coverage
+
+# Run all tests
+pytest
+
+# Run specific test files
+pytest tests/test_auth.py
+pytest tests/test_user_service.py
+pytest tests/test_chat_router.py
+pytest tests/test_document_router.py
+
+# Verbose output with coverage
+pytest -v --cov=app --cov-report=html
 ```
 
-#### Frontend Tests
+#### Frontend Unit Tests (Vitest)
 
 ```bash
 cd frontend
 
-# Unit tests (Vitest)
+# Run all unit tests
 npm run test:unit
+
+# Run with coverage
 npm run test:unit -- --coverage
 
-# E2E tests (Playwright)
-npx playwright install          # First time only
-npm run test:e2e
-npm run test:e2e -- --debug     # Debug mode
-npm run test:e2e -- --project=chromium  # Specific browser
+# Run in watch mode
+npm run test:unit -- --watch
 ```
+
+#### Frontend E2E Tests (Playwright)
+
+```bash
+cd frontend
+
+# Install browsers (first time only)
+npx playwright install
+
+# Run all E2E tests
+npm run test:e2e
+
+# Run specific test file
+npm run test:e2e -- tests/authentication.spec.ts
+npm run test:e2e -- tests/chat.spec.ts
+npm run test:e2e -- tests/email-verification.spec.ts
+
+# Run in specific browser
+npm run test:e2e -- --project=chromium
+npm run test:e2e -- --project=firefox
+npm run test:e2e -- --project=webkit
+
+# Debug mode
+npm run test:e2e -- --debug
+
+# UI mode for interactive testing
+npm run test:e2e -- --ui
+```
+
+#### CI/CD Testing
+
+The project uses GitHub Actions for automated testing:
+
+- **Backend Tests**: Run with PostgreSQL and Redis services
+- **Frontend Unit Tests**: Vitest with coverage reporting
+- **Frontend E2E Tests**: Playwright on multiple browsers
+- **Linting & Formatting**: ESLint, Prettier, Black, isort
+- **Security Scanning**: Trivy for vulnerability detection
+- **Build Checks**: Ensure Docker images build successfully
 
 ### Debugging
 
@@ -524,6 +732,148 @@ sudo sysctl -p
 
 ---
 
+## Advanced Features
+
+### Email Verification System
+
+New users must verify their email address before they can access the application.
+
+#### Setup Gmail API
+
+1. **Create Google Cloud Project** and enable Gmail API
+2. **Create OAuth 2.0 credentials** (Desktop app type)
+3. **Download credentials** and save as `backend/app/service/gmail/credentials.json`
+4. **Configure environment**:
+
+```bash
+# .env
+GMAIL_CREDENTIALS_PATH=app/service/gmail/credentials.json
+GMAIL_TOKEN_PATH=app/service/gmail/token.json
+SENDER_EMAIL=your-email@gmail.com
+```
+
+5. **First-time authorization**: Run the backend, it will open a browser for Gmail authorization
+6. **Token saved**: `token.json` will be created and used for subsequent emails
+
+#### Email Verification Flow
+
+1. User registers at `/api/v1/user/` → Account created with `is_verified=false`
+2. Verification email sent with JWT token link
+3. User clicks link → Redirected to frontend `/verify-email?token=...`
+4. Frontend calls `/api/v1/user/verify-email` → Account verified
+5. User can now login
+
+### Password Reset Flow
+
+Users can reset their password via email:
+
+1. User requests reset at `/api/v1/user/request-password-reset` with email
+2. Email sent with JWT token link (15-minute expiration)
+3. User clicks link → Redirected to frontend `/reset-password?token=...`
+4. User enters new password → Frontend calls `/api/v1/user/reset-password`
+5. Password updated, user can login with new password
+
+### LangGraph Agent System
+
+The application includes a sophisticated multi-step reasoning agent powered by LangGraph.
+
+#### Features
+
+- **Multi-step reasoning**: Iterative problem solving with tool usage
+- **Search integration**: Google Search (via Serper) and Tavily Search
+- **Decision making**: Agent decides when to search, when to respond
+- **State management**: Tracks conversation context and search results
+
+#### Architecture
+
+The agent uses a state graph with multiple nodes:
+
+1. **Reasoner**: Analyzes the query and decides next action
+2. **Search Decision**: Determines if search is needed
+3. **Search Executor**: Runs search queries if needed
+4. **Response Generator**: Synthesizes final answer
+
+#### Configuration
+
+```bash
+# .env - Both optional, agent works without search if not provided
+SERPER_API_KEY=your-serper-api-key-here      # For Google Search
+TAVILY_API_KEY=your-tavily-api-key-here      # For Tavily Search
+```
+
+#### Using the Agent
+
+The agent is integrated into the chat endpoint. No special configuration needed - it automatically uses available search tools when beneficial.
+
+For detailed architecture, see [backend/app/service/llm/README.md](backend/app/service/llm/README.md).
+
+### Database Migrations with Alembic
+
+The project uses Alembic for database schema management.
+
+#### Create a New Migration
+
+```bash
+cd backend
+
+# Auto-generate migration from model changes
+alembic revision --autogenerate -m "Description of changes"
+
+# Create empty migration
+alembic revision -m "Description of changes"
+```
+
+#### Apply Migrations
+
+```bash
+# Upgrade to latest
+alembic upgrade head
+
+# Upgrade to specific revision
+alembic upgrade abc123
+
+# Downgrade one revision
+alembic downgrade -1
+```
+
+#### Migration History
+
+```bash
+# Show current revision
+alembic current
+
+# Show migration history
+alembic history
+
+# Show pending migrations
+alembic history --verbose
+```
+
+### Internationalization (i18n)
+
+The frontend supports multiple languages using vue-i18n.
+
+#### Supported Languages
+
+- **English** (en)
+- **Traditional Chinese** (zh-TW)
+
+#### Adding New Languages
+
+1. Create new locale file in `frontend/src/locale/`
+2. Import in `frontend/src/utils/i18n.ts`
+3. Add to locale options in `frontend/src/utils/locale.ts`
+
+#### Usage in Components
+
+```vue
+<template>
+  <div>{{ $t('welcome.message') }}</div>
+</template>
+```
+
+---
+
 ## Production Deployment
 
 ### Build for Production
@@ -534,23 +884,77 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 ### Production Checklist
 
-- [ ] Change `SECRET_KEY` in `.env` to a strong random value
-- [ ] Set proper `FRONTEND_HOST` for CORS
-- [ ] Configure firewall/security groups
-- [ ] Enable HTTPS with reverse proxy (nginx/traefik)
-- [ ] Set up database backups
-- [ ] Configure log aggregation
-- [ ] Set resource limits in docker-compose
-- [ ] Enable monitoring (Sentry, etc.)
+- [ ] Change `SECRET_KEY` in `.env` to a strong random value (use `openssl rand -hex 32`)
+- [ ] Set proper `FRONTEND_HOST` for CORS configuration
+- [ ] Configure Gmail API credentials for email verification/password reset
+- [ ] Set up firewall rules and security groups
+- [ ] Enable HTTPS with reverse proxy (nginx/traefik/Caddy)
+- [ ] Configure database backups with `scripts/db-backup.sh`
+- [ ] Set up log aggregation (e.g., ELK stack, CloudWatch)
+- [ ] Configure resource limits in docker-compose.prod.yml
+- [ ] Enable monitoring and alerting (Sentry, Prometheus, etc.)
+- [ ] Run database migrations: `alembic upgrade head`
+- [ ] Set appropriate token expiration times
+- [ ] Review and restrict API rate limits
 
 ---
 
 ## Additional Resources
 
-- **Gemini File Search Guide**: See [QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI_FILE_SEARCH.md)
-- **Docker Deployment**: See [DOCKER_README.md](DOCKER_README.md) and [DOCKER_SETUP.md](DOCKER_SETUP.md)
-- **Claude Code Guide**: See [CLAUDE.md](CLAUDE.md)
-- **API Documentation**: http://localhost:5000/docs (when running)
+### Documentation
+
+- **[CLAUDE.md](CLAUDE.md)** - Comprehensive guide for Claude Code with architecture details
+- **[TESTING.md](TESTING.md)** - Complete testing documentation (backend, frontend, CI/CD)
+- **[QUICKSTART_GEMINI_FILE_SEARCH.md](QUICKSTART_GEMINI_FILE_SEARCH.md)** - Quick start guide for Gemini RAG system
+- **[DOCKER_SETUP.md](DOCKER_SETUP.md)** - Detailed Docker deployment guide
+- **[DOCKER_README.md](DOCKER_README.md)** - Docker configuration reference
+- **[backend/app/service/llm/README.md](backend/app/service/llm/README.md)** - LLM service and agent architecture
+
+### API Documentation
+
+- **Swagger UI**: http://localhost:5000/docs (interactive API documentation)
+- **ReDoc**: http://localhost:5000/redoc (alternative API documentation)
+- **Health Check**: http://localhost:5000/api/v1/health
+
+### Useful Commands
+
+```bash
+# Quick development setup
+make dev              # Start development environment
+make logs             # View all logs
+make test             # Run all tests
+make health           # Check service health
+
+# Database management
+make backup           # Backup database
+make restore          # Restore database
+alembic upgrade head  # Apply migrations
+
+# Testing
+pytest                # Backend tests
+npm run test:unit     # Frontend unit tests
+npm run test:e2e      # Frontend E2E tests
+
+# Docker management
+make stop             # Stop all services
+make clean            # Remove containers and volumes
+make rebuild          # Full rebuild
+```
+
+### Project Statistics
+
+- **Backend**: FastAPI with 5+ routers, 10+ services, comprehensive test coverage
+- **Frontend**: Vue 3 with TypeScript, 4+ views, 4+ components, E2E testing
+- **Database**: PostgreSQL with Alembic migrations, Snowflake ID generation
+- **Testing**: pytest (backend), Vitest (unit), Playwright (E2E), GitHub Actions CI/CD
+- **Documentation**: 7 comprehensive .md files covering all aspects
+
+### Getting Help
+
+- **Issues**: Report bugs or request features on the project repository
+- **API Docs**: Check Swagger UI at http://localhost:5000/docs for endpoint details
+- **Logs**: Use `make logs` or individual service logs for debugging
+- **Health**: Use `make health` to verify all services are running correctly
 
 ## License
 
