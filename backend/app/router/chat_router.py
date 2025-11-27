@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Header
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel
 from typing import Literal, Optional
 from app.config import settings
 from app.service.llm import ChatAgentGraph, LLMFactory, SearchTools
