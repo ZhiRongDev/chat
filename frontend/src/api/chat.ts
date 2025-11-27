@@ -37,7 +37,6 @@ export const chatApi = {
     const response = await api.get<ChatHistoryItem[]>('/chat/history', {
       params: { limit },
     })
-    console.log('getChatHistories response:', response.data);
     return response.data
   },
 

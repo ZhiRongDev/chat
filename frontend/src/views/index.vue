@@ -773,17 +773,13 @@ const loadChatHistories = async () => {
 
 const saveCurrentChat = async () => {
   try {
-    console.log('saveCurrentChat called, messages count:', messages.value.length)
-
     // Only save if logged in
     if (!isLoggedIn.value) {
-      console.log('Skipping save - user not logged in')
       return
     }
 
     // Only save if there are messages beyond the initial greeting
     if (messages.value.length <= 1) {
-      console.log('Skipping save - not enough messages')
       return
     }
 
@@ -804,10 +800,8 @@ const saveCurrentChat = async () => {
     // Update current chat ID if it was a new chat
     if (!currentChatId.value) {
       currentChatId.value = savedChat.id
-      console.log('Generated new chat ID:', currentChatId.value)
     }
 
-    console.log('Saved chat history:', savedChat)
     await loadChatHistories()
   } catch (error) {
     console.error('Failed to save chat:', error)

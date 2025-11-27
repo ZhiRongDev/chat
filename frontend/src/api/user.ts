@@ -53,9 +53,7 @@ export const userApi = {
    * Register a new user account
    */
   register: async (payload: RegisterPayload): Promise<MessageResponse> => {
-    console.log(payload);
     const response = await api.post<MessageResponse>('/user/register', payload)
-    console.log(response);
     return response.data
   },
 
