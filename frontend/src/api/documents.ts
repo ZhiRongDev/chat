@@ -18,17 +18,8 @@ export interface Document {
   updated_at: number
 }
 
-export interface DocumentChunk {
-  id: string  // Snowflake ID as string
-  document_id: string
-  chunk_index: number
-  content: string
-  metadata?: Record<string, any>
-  created_at: number
-}
-
 export interface DocumentDetail extends Document {
-  chunks: DocumentChunk[]
+  // No chunks needed - Gemini File Search handles chunking internally
 }
 
 export interface DocumentStats {

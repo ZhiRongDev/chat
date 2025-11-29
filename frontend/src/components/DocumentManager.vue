@@ -231,18 +231,9 @@
             </div>
           </div>
 
-          <h5 class="mt-4">Content Chunks</h5>
-          <div class="chunks-list">
-            <div
-              v-for="chunk in documentChunks"
-              :key="chunk.id"
-              class="chunk-item"
-            >
-              <div class="chunk-header">
-                <span class="badge bg-secondary">Chunk {{ chunk.chunk_index }}</span>
-              </div>
-              <div class="chunk-content">{{ chunk.content }}</div>
-            </div>
+          <div class="info-message">
+            <i class="bi bi-info-circle"></i>
+            <p>Document content is managed by Gemini File Search. Chunks are processed and indexed automatically.</p>
           </div>
         </div>
       </div>
@@ -252,7 +243,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { documentsApi, type Document, type DocumentDetail, type DocumentChunk, type DocumentStats } from '@/api/documents'
+import { documentsApi, type Document, type DocumentDetail, type DocumentStats } from '@/api/documents'
 
 const documents = ref<Document[]>([])
 const stats = ref<DocumentStats | null>(null)
@@ -260,7 +251,6 @@ const loading = ref(false)
 const showUploadModal = ref(false)
 const showDetailModal = ref(false)
 const selectedDocument = ref<DocumentDetail | null>(null)
-const documentChunks = ref<DocumentChunk[]>([])
 const uploading = ref(false)
 const uploadError = ref('')
 
@@ -349,7 +339,6 @@ const handleUpload = async () => {
 const viewDocument = async (doc: Document) => {
   try {
     selectedDocument.value = await documentsApi.getDocumentDetail(doc.id)
-    documentChunks.value = selectedDocument.value.chunks
     showDetailModal.value = true
   } catch (error: any) {
     console.error('Failed to load document details:', error)
@@ -384,7 +373,6 @@ const closeUploadModal = () => {
 const closeDetailModal = () => {
   showDetailModal.value = false
   selectedDocument.value = null
-  documentChunks.value = []
 }
 
 const getDocumentIcon = (contentType: string): string => {
@@ -657,25 +645,23 @@ const formatDate = (timestamp: number): string => {
   border-bottom: none;
 }
 
-.chunks-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.chunk-item {
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 1rem;
   background: var(--bs-light);
   border-radius: 4px;
-  margin-bottom: 0.75rem;
+  margin-top: 1rem;
 }
 
-.chunk-header {
-  margin-bottom: 0.5rem;
+.info-message i {
+  font-size: 1.5rem;
+  color: var(--bs-info);
 }
 
-.chunk-content {
-  white-space: pre-wrap;
-  font-size: 0.875rem;
-  line-height: 1.5;
+.info-message p {
+  margin: 0;
+  color: var(--bs-secondary);
 }
 </style>
