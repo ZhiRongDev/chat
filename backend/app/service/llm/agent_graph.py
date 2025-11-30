@@ -1,6 +1,35 @@
 """
 LangGraph Agent for Enhanced Chat
 Implements a multi-step reasoning workflow with optional search integration
+
+Here's a visual representation of the LangGraph workflow if _build_graph() is called:
+
+          +----------------+
+          |   AgentState  |
+          +----------------+
+                  |
+                  | Entry Point
+                  v
+          +----------------+
+          |   Analyzer     |
+          +----------------+
+                  |
+                  | _should_search
+                  v
++----------------+       +----------------+
+|   Search       |       |   Responder     |
++----------------+       +----------------+
+                  |       |
+                  |       | _generate_response
+                  |       v
+                  +-------+
+                            |
+                            | END
+                            v
+          +----------------+
+          |   END          |
+          +----------------+
+
 """
 
 from typing import TypedDict, Annotated, Sequence, AsyncIterator
@@ -185,7 +214,7 @@ class ChatAgentGraph:
 
     async def astream(self, message: str) -> AsyncIterator[str]:
         """
-        Stream chat response asynchronously
+        Stream chat response asynchronously with real-time token streaming
 
         Args:
             message: User message
@@ -199,17 +228,48 @@ class ChatAgentGraph:
             "final_response": "",
         }
 
-        # Run the graph
-        final_state = await self.graph.ainvoke(initial_state)
+        # Check if we need to run analysis/search first
+        if self.search_tools:
+            # Run analyzer to check if search is needed
+            analyzer_state = self._analyze_query(initial_state)
 
-        # Get the final AI message
-        messages = final_state["messages"]
-        for msg in reversed(messages):
-            if isinstance(msg, AIMessage) and msg.content:
-                # Stream the content
-                for char in msg.content:
-                    yield char
-                break
+            # Merge analyzer state
+            current_state = {**initial_state, **analyzer_state}
+
+            # If search is needed, run search
+            if self._should_search(current_state) == "search":
+                # Execute search tools
+                from langgraph.prebuilt import ToolNode
+                tool_node = ToolNode(self.search_tools)
+                search_result = await tool_node.ainvoke(current_state)
+
+                # Merge search results
+                current_state = {
+                    "messages": current_state["messages"] + search_result["messages"],
+                    "needs_search": False,
+                    "final_response": "",
+                }
+
+            # Now stream the final response
+            messages = current_state["messages"]
+        else:
+            # No search tools, use initial messages
+            messages = initial_state["messages"]
+
+        # Add system message for final response
+        system_prompt = SystemMessage(
+            content=(
+                "You are a helpful, friendly, and knowledgeable AI assistant. "
+                "Provide clear, accurate, and well-structured responses. "
+                "If you used search results, synthesize the information naturally. "
+                "Be concise but thorough in your answers."
+            )
+        )
+
+        # Stream the LLM response in real-time
+        async for chunk in self.llm.astream([system_prompt] + list(messages)):
+            if hasattr(chunk, 'content') and chunk.content:
+                yield chunk.content
 
     async def astream_events(self, message: str) -> AsyncIterator[dict]:
         """
