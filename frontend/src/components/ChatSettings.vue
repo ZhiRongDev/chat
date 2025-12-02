@@ -349,6 +349,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { appendAlert } from '@/utils/alert'
+import { useUserStore } from '@/stores/user'
 
 export interface ChatSettings {
   useRag: boolean
@@ -420,7 +421,8 @@ const loadingDocuments = ref(false)
 const deleteConfirmId = ref<string | null>(null)
 
 // Check if user is logged in
-const isLoggedIn = computed(() => !!localStorage.getItem('token'))
+const userStore = useUserStore()
+const isLoggedIn = computed(() => !!userStore.user.username)
 
 // Upload state
 const uploadTab = ref<'file' | 'text'>('file')
@@ -478,16 +480,10 @@ const uploadFile = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 
-    const token = localStorage.getItem('token')
-    const headers: HeadersInit = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
     const response = await fetch('http://localhost:5000/api/v1/documents/upload', {
       method: 'POST',
-      headers,
       body: formData,
+      credentials: 'include', // Send cookies for authentication
     })
 
     if (!response.ok) {
@@ -523,12 +519,8 @@ const uploadText = async () => {
   uploadStatus.value = null
 
   try {
-    const token = localStorage.getItem('token')
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
-    }
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
     }
 
     const response = await fetch('http://localhost:5000/api/v1/documents/ingest/text', {
@@ -538,6 +530,7 @@ const uploadText = async () => {
         title: textDocument.value.title,
         content: textDocument.value.content,
       }),
+      credentials: 'include', // Send cookies for authentication
     })
 
     if (!response.ok) {
@@ -570,22 +563,16 @@ const uploadText = async () => {
 const fetchDocuments = async () => {
   loadingDocuments.value = true
   try {
-    const token = localStorage.getItem('token')
-
     // If not logged in, just set empty array and return
-    if (!token) {
+    if (!isLoggedIn.value) {
       documents.value = []
       loadingDocuments.value = false
       return
     }
 
-    const headers: HeadersInit = {
-      Authorization: `Bearer ${token}`,
-    }
-
     const response = await fetch('http://localhost:5000/api/v1/documents/', {
       method: 'GET',
-      headers,
+      credentials: 'include', // Send cookies for authentication
     })
 
     if (!response.ok) {
@@ -630,15 +617,9 @@ const confirmDeleteDocument = (documentId: string) => {
 
 const deleteDocument = async (documentId: string) => {
   try {
-    const token = localStorage.getItem('token')
-    const headers: HeadersInit = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
     const response = await fetch(`http://localhost:5000/api/v1/documents/${documentId}`, {
       method: 'DELETE',
-      headers,
+      credentials: 'include', // Send cookies for authentication
     })
 
     if (!response.ok) {

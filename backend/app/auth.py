@@ -2,13 +2,14 @@ import jwt
 from app.config import settings
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Cookie
 from fastapi.security import OAuth2PasswordBearer
 from app.service.user_service import UserService
+from typing import Optional
 
 
 # This will check the response of '/api/v1/token'
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token", auto_error=False)
 
 
 class CreateAccessTokenPayload(BaseModel):
@@ -44,19 +45,48 @@ def verify_access_token(token: str) -> dict:
     return result
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    token_data = verify_access_token(token)
-    username = token_data.get("sub")
-    if not username:
+async def get_current_user(sessionId: Optional[str] = Cookie(None)):
+    """
+    Get current user from session cookie.
+
+    Args:
+        sessionId: JWT token from httpOnly cookie
+
+    Returns:
+        User object if authenticated
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    if not sessionId:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Not authenticated",
         )
-    user_service = UserService()
-    user = user_service.get_user_by_username(username)
-    if user is None:
+
+    try:
+        token_data = verify_access_token(sessionId)
+        username = token_data.get("sub")
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        user_service = UserService()
+        user = user_service.get_user_by_username(username)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        return user
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Session expired",
         )
-    return user
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )

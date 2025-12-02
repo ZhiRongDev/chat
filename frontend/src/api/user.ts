@@ -18,8 +18,6 @@ export interface UserResponse {
 }
 
 export interface LoginResponse {
-  access_token: string
-  token_type: string
   user: UserResponse
 }
 
@@ -86,6 +84,14 @@ export const userApi = {
    */
   verifyEmail: async (payload: VerifyEmailPayload): Promise<MessageResponse> => {
     const response = await api.post<MessageResponse>('/user/verify-email', payload)
+    return response.data
+  },
+
+  /**
+   * Logout - clears session cookie
+   */
+  logout: async (): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>('/user/logout')
     return response.data
   },
 }

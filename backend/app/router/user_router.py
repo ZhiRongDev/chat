@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from pydantic import BaseModel, field_serializer
 from app.model import User
 from app.service.user_service import UserService
@@ -31,8 +31,6 @@ class UserResponse(BaseModel):
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str
     user: UserResponse
 
 
@@ -48,6 +46,19 @@ async def user(current_user: User = Depends(get_current_user)):
         username=current_user.username,
         created_at=current_user.created_at
     )
+
+
+@auth_router.post("/logout", response_model=MessageResponse)
+async def logout(response: Response):
+    """
+    Logout by clearing the session cookie.
+    """
+    response.delete_cookie(
+        key="sessionId",
+        path="/",
+        samesite="lax"
+    )
+    return MessageResponse(message="Logged out successfully")
 
 
 @nonauth_router.post("/register", response_model=MessageResponse)
@@ -95,14 +106,14 @@ async def register(payload: UserPayload):
 
 
 @nonauth_router.post("/login", response_model=LoginResponse)
-async def login(payload: UserPayload):
+async def login(payload: UserPayload, response: Response):
     """
     Login with username and password.
 
     - **username**: Your username
     - **password**: Your password
 
-    Returns an access token and user information.
+    Returns user information and sets a session cookie.
     """
     user_service = UserService()
 
@@ -128,9 +139,18 @@ async def login(payload: UserPayload):
 
     access_token = create_access_token(CreateAccessTokenPayload(sub=user.username))
 
+    # Set JWT in httpOnly cookie
+    response.set_cookie(
+        key="sessionId",
+        value=access_token,
+        httponly=True,
+        secure=True,  # Use True in production with HTTPS
+        samesite="lax",
+        path="/",
+        max_age=settings.EXPIRES_DELTA * 60  # Convert minutes to seconds
+    )
+
     return LoginResponse(
-        access_token=access_token,
-        token_type="bearer",
         user=UserResponse(id=str(user.id), username=user.username, created_at=user.created_at),
     )
 

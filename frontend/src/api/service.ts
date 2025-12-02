@@ -10,17 +10,14 @@ import { useUserStore } from '@/stores/user'
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1', // your API base URL
   timeout: 10000, // request timeout in ms
+  withCredentials: true, // Send cookies with requests
 })
 
-// Request interceptor: add Authorization header
+// Request interceptor: No need to add Authorization header manually
+// Cookies are sent automatically with withCredentials: true
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get the token from localStorage directly to avoid initialization issues
-    const token = localStorage.getItem('token')
-    if (token && config.headers) {
-      config.headers['Authorization'] = `Bearer ${token}`
-    }
-    // You can also add other common headers here
+    // You can add other common headers here if needed
     return config
   },
   (error) => {
@@ -37,17 +34,23 @@ api.interceptors.response.use(
   (error) => {
     if (error.response) {
       const status = error.response.status
+      const url = error.config?.url || ''
+
       switch (status) {
         case 401:
-          // Unauthorized, clear token and user data
-          localStorage.removeItem('token')
-          localStorage.removeItem('username')
-          // Try to get the user store if available
-          try {
-            const userStore = useUserStore()
-            userStore.logout()
-          } catch (e) {
-            // Store not available yet, just clear localStorage
+          // Don't trigger logout if we're already on the logout endpoint
+          // This prevents infinite loop when cookie is already invalid
+          if (!url.includes('/user/logout')) {
+            // Unauthorized, clear user data (cookie is httpOnly, cleared by server)
+            localStorage.removeItem('username')
+            // Try to get the user store if available
+            try {
+              const userStore = useUserStore()
+              // Clear local state without calling API
+              userStore.user.username = ''
+            } catch (e) {
+              // Store not available yet, just clear localStorage
+            }
           }
           break
         case 403:

@@ -723,17 +723,12 @@ const sendMessage = async () => {
       'Content-Type': 'application/json',
     }
 
-    // Add authorization token if user is logged in (for personal RAG store)
-    const token = localStorage.getItem('token')
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
     const res = await fetch('http://localhost:5000/api/v1/chat', {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
       signal: abortController.signal,
+      credentials: 'include', // Send cookies for authentication
     })
 
     // Ensure the response body is available and the request was successful
