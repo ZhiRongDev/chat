@@ -31,7 +31,7 @@
       </div>
 
       <!-- Messages -->
-      <div class="messages-container">
+      <div class="messages-container" ref="messagesContainer">
         <div class="messages-wrapper">
           <div
             v-for="(msg, index) in messages"
@@ -59,6 +59,23 @@
 
           <div ref="endOfMessages"></div>
         </div>
+
+        <!-- Scroll to Bottom Button -->
+        <button
+          v-show="showScrollButton"
+          @click="scrollToBottom"
+          class="scroll-to-bottom-btn"
+          aria-label="Scroll to bottom"
+        >
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            ></path>
+          </svg>
+        </button>
       </div>
 
       <!-- Input -->
@@ -537,6 +554,7 @@ const currentMessage = ref('')
 const loading = ref(false)
 const sidebarOpen = ref(true)
 const endOfMessages = ref<HTMLElement | null>(null)
+const messagesContainer = ref<HTMLElement | null>(null)
 const modalType = ref('')
 const modalTitle = ref('')
 const chatHistories = ref<ChatHistoryItem[]>([])
@@ -545,6 +563,7 @@ const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const streamingMessageId = ref<string | null>(null) // Track which message is currently streaming
+const showScrollButton = ref(false) // Show/hide scroll to bottom button
 let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
 let abortController: AbortController | null = null // Controller to abort ongoing requests
 
@@ -586,6 +605,17 @@ const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
 const showRegisterConfirmPassword = ref(false)
 
+// Check if user is near bottom of messages container
+const checkScrollPosition = () => {
+  if (!messagesContainer.value) return
+
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+  const threshold = 100 // Show button if more than 100px from bottom
+  const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold
+
+  showScrollButton.value = !isNearBottom
+}
+
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
   try {
@@ -593,6 +623,11 @@ onMounted(async () => {
     const modalElement = document.getElementById('appModal')
     if (modalElement) {
       bootstrapModal = new Modal(modalElement)
+    }
+
+    // Add scroll listener to messages container
+    if (messagesContainer.value) {
+      messagesContainer.value.addEventListener('scroll', checkScrollPosition)
     }
 
     // Check if we have reset token in URL query params
@@ -625,6 +660,10 @@ onMounted(async () => {
 onUnmounted(() => {
   if (bootstrapModal) {
     bootstrapModal.dispose()
+  }
+  // Remove scroll listener
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', checkScrollPosition)
   }
 })
 
@@ -786,9 +825,6 @@ const sendMessage = async () => {
       if (botMessage) {
         botMessage.text += chunk
       }
-
-      await nextTick()
-      await scrollToBottom()
     }
 
     // Final decoding step in case of partial characters at the end
@@ -1215,6 +1251,7 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
   display: flex;
   justify-content: center;
   background: linear-gradient(to bottom, #f9fafb, #ffffff);
+  position: relative;
 }
 
 @media (min-width: 769px) {
@@ -2028,5 +2065,60 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+}
+
+/* Scroll to Bottom Button */
+.scroll-to-bottom-btn {
+  position: fixed;
+  bottom: 120px;
+  right: 32px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn {
+    bottom: 90px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.scroll-to-bottom-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.scroll-to-bottom-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.scroll-to-bottom-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+  stroke-width: 2.5;
+}
+
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 </style>
