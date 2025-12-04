@@ -21,10 +21,10 @@ for var in "${required_vars[@]}"; do
     fi
 done
 
-# Pull latest changes (if in a git repo)
+# Pull latest changes (if in a git repo and tracking branch exists)
 if [ -d .git ]; then
     echo "📥 Pulling latest changes..."
-    git pull
+    git pull 2>/dev/null || echo "⚠️  Skipping git pull (no tracking branch or failed)"
 fi
 
 # Backup database (if needed)
