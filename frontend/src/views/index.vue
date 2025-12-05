@@ -1069,7 +1069,10 @@ const handleLogin = handleLoginSubmit(async (values) => {
     await loadChatHistories()
   } catch (error: any) {
     console.error('Login error:', error)
-    if (error.response?.data?.detail) {
+    if (error.response?.status === 403) {
+      // Email verification required
+      errorMessage.value = error.response?.data?.detail || 'Please verify your email before logging in.'
+    } else if (error.response?.data?.detail) {
       errorMessage.value = error.response.data.detail
     } else if (error.response?.status === 401) {
       errorMessage.value = 'Invalid username or password'
