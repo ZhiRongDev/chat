@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 # Set the SQLAlchemy URL from settings
 config.set_main_option(
     "sqlalchemy.url",
-    f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
 )
 
 # add your model's MetaData object here

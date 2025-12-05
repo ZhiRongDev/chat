@@ -31,15 +31,3 @@ services:
       - ENVIRONMENT=development
       - DEBUG=True
     command: sh -c "alembic upgrade head && python main.py"
-
-  db:
-    ports:
-      - "5432:5432"
-    # Use a development-specific volume to avoid data conflicts
-    volumes:
-      - pg_data_dev:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-chat_dev}
-
-volumes:
-  pg_data_dev:

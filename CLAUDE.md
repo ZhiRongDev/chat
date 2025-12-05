@@ -91,7 +91,8 @@ npm run test:e2e -- --debug  # Debug mode
 ### Docker
 
 ```bash
-# Start all services (frontend, backend, PostgreSQL)
+# Start all services (frontend, backend)
+# Note: PostgreSQL should be configured as external service (Zeabur, AWS RDS, etc.)
 docker-compose up
 
 # Build and start
@@ -121,7 +122,7 @@ docker-compose logs -f frontend
   - `user_model.py`: User table with Snowflake IDs, bcrypt password hashing
   - `chat_model.py`: Chat history and messages
   - `document_model.py`: Document metadata, chunks, and vector store config
-- **Database**: PostgreSQL via docker-compose (port 5432)
+- **Database**: External managed PostgreSQL (Zeabur, AWS RDS, Supabase, etc.)
 - **Vector Store**: FAISS/ChromaDB for document embeddings (stored in `data/vector_stores/`)
 
 ### Authentication & Authorization

@@ -5,6 +5,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ## Features
 
 ### Core Features
+
 - **RAG-Enhanced Chat**: Chat with AI using standard LLM responses or RAG-enhanced responses with document context
 - **LangGraph Agent System**: Multi-step reasoning with integrated search capabilities (Google via Serper, Tavily Search)
 - **Document Management**: Upload and manage PDF, TXT, Markdown, DOCX, JSON, CSV, and more
@@ -12,12 +13,14 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 - **Gemini File Search**: Automatic document indexing, embedding, and semantic retrieval with per-user stores
 
 ### Authentication & Security
+
 - **User Authentication**: JWT-based authentication with bcrypt password hashing
 - **Email Verification**: Required email verification for new user accounts via Gmail API
 - **Password Reset**: Secure password reset flow with email-based JWT tokens
 - **Optional Authentication**: Chat endpoint works with or without authentication
 
 ### Development & Deployment
+
 - **Real-time Updates**: Hot reload for development (frontend and backend)
 - **Database Migrations**: Alembic-based migration system for schema changes
 - **Form Validation**: VeeValidate with Yup schemas for robust input validation
@@ -30,6 +33,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ## Tech Stack
 
 ### Backend
+
 - **Framework**: FastAPI with Uvicorn/Gunicorn
 - **Database**: PostgreSQL 16 with SQLModel ORM
 - **Authentication**: JWT tokens with bcrypt password hashing
@@ -43,6 +47,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 - **Testing**: pytest with coverage
 
 ### Frontend
+
 - **Framework**: Vue 3.5 with TypeScript 5.9
 - **Build Tool**: Vite 7.1
 - **State Management**: Pinia 3.0
@@ -54,6 +59,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 - **Testing**: Vitest (unit), Playwright (E2E)
 
 ### Infrastructure
+
 - **Containerization**: Docker with Docker Compose
 - **Web Server**: Nginx (production)
 - **CI/CD**: GitHub Actions with automated testing, linting, security scanning
@@ -91,8 +97,12 @@ nano .env  # or use your preferred editor
 **Required configuration in `.env`:**
 
 ```bash
-# Database (use these values for Docker)
-DB_HOST=db
+# Database (use your external database credentials)
+POSTGRES_HOST=your-database-host.example.com
+POSTGRES_USER=postgres
+POSTGRES_DB=chat_dev
+POSTGRES_PASSWORD=your-secure-password
+POSTGRES_PORT=22463
 
 # API Keys (add at least one)
 GEMINI_API_KEY=your-gemini-api-key-here
@@ -130,7 +140,6 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 - **Frontend**: http://localhost:5173 (dev) or http://localhost:80 (prod)
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
-- **PostgreSQL**: localhost:5432
 
 #### 5. Stop the Application
 
@@ -193,15 +202,20 @@ nano .env  # Configure for local development
 **Configure `.env` for local development:**
 
 ```bash
-DB_HOST=localhost
+# Use your external database or local PostgreSQL
+POSTGRES_HOST=localhost  # or your external database host
+POSTGRES_USER=postgres
+POSTGRES_DB=chat_dev
+POSTGRES_PASSWORD=postgres
+POSTGRES_PORT=22463
+
 # ... add your API keys
 ```
 
-**Start PostgreSQL locally:**
+**Note**: This project is designed to use external managed PostgreSQL (Zeabur, AWS RDS, Supabase, etc.). If you need to run PostgreSQL locally for development, you can use Docker:
 
 ```bash
-# Using Docker for just the database
-docker run -d -p 5432:5432 \
+docker run -d -p 22463:22463 \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=chat_dev \
@@ -400,14 +414,15 @@ TORCH_DEVICE=cpu          # Force CPU execution
 
 ### Working with the Database
 
+This project uses external managed PostgreSQL databases (Zeabur, AWS RDS, Supabase, etc.).
+
 #### Access PostgreSQL Database
 
 ```bash
-# Via Docker
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec db psql -U postgres -d chat_dev
+# Connect to your external database
+psql -h your-database-host -U postgres -d chat_dev
 
-# Local connection
-psql -h localhost -U postgres -d chat_dev
+# Or use your database provider's web console
 ```
 
 #### View Database Tables
@@ -419,14 +434,11 @@ SELECT * FROM documents;     -- View documents
 SELECT * FROM chat_history;  -- View chat history
 ```
 
-#### Reset Database
+#### Run Migrations
 
 ```bash
-# Stop containers and remove volumes
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
-
-# Restart (will create fresh database)
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+cd backend
+alembic upgrade head  # Apply all migrations to your external database
 ```
 
 ### API Development
@@ -665,7 +677,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec db bash
 
 ```bash
 # Find process using port
-lsof -i :5000  # or :5173, :5432, :6379
+lsof -i :5000  # or :5173, :22463, :6379
 
 # Kill process
 kill -9 <PID>
@@ -682,7 +694,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml ps db
 # Check logs
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs db
 
-# Ensure DB_HOST=db in .env when using Docker
+# Ensure POSTGRES_HOST=db in .env when using Docker
 ```
 
 #### Module Not Found Errors
@@ -846,7 +858,7 @@ The frontend supports multiple languages using vue-i18n.
 
 ```vue
 <template>
-  <div>{{ $t('welcome.message') }}</div>
+  <div>{{ $t("welcome.message") }}</div>
 </template>
 ```
 

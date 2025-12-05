@@ -36,7 +36,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
-- **PostgreSQL**: localhost:5432
+- **PostgreSQL**: localhost:22463
 
 ## What's Changed (Gemini File Search Migration)
 
@@ -172,8 +172,8 @@ nano .env.prod
 # Required production variables:
 # - GEMINI_API_KEY
 # - SECRET_KEY (generate strong random key)
-# - DB_PASSWORD (strong password)
-# - POSTGRES_PASSWORD (same as DB_PASSWORD)
+# - POSTGRES_PASSWORD (strong password)
+# - POSTGRES_PASSWORD (same as POSTGRES_PASSWORD)
 ```
 
 ### 2. Deploy
@@ -217,7 +217,7 @@ Production mode uses:
                 │                     │
          ┌──────▼──────┐      ┌──────▼──────────────┐
          │  PostgreSQL │      │  Gemini File Search │
-         │  Port: 5432 │      │  (Google Cloud)     │
+         │  Port: 22463 │      │  (Google Cloud)     │
          └─────────────┘      └─────────────────────┘
 ```
 
@@ -240,8 +240,8 @@ Production mode uses:
 # Backend
 GEMINI_API_KEY=your-gemini-api-key-here  # REQUIRED for RAG
 SECRET_KEY=your-secret-key-here          # JWT secret
-DB_PASSWORD=your-db-password
-POSTGRES_PASSWORD=your-db-password        # Same as DB_PASSWORD
+POSTGRES_PASSWORD=your-db-password
+POSTGRES_PASSWORD=your-db-password        # Same as POSTGRES_PASSWORD
 
 # Frontend (set in docker-compose.dev.yml)
 VITE_API_BASE_URL=http://localhost:5000
@@ -264,10 +264,10 @@ GEMINI_STORE_SIZE_LIMIT_GB=20
 GEMINI_MAX_FILE_SIZE_MB=100
 
 # Database
-DB_HOST=db                               # 'db' for Docker, 'localhost' for local
-DB_USER=postgres
-DB_NAME=chat_dev
-DB_PORT=5432
+POSTGRES_HOST=db                               # 'db' for Docker, 'localhost' for local
+POSTGRES_USER=postgres
+POSTGRES_DB=chat_dev
+POSTGRES_PORT=22463
 ```
 
 ## Troubleshooting
@@ -283,7 +283,7 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs backend
 #    Solution: Set in .env file
 #
 # 2. Database connection error
-#    Solution: Ensure DB_HOST=db in .env for Docker
+#    Solution: Ensure POSTGRES_HOST=db in .env for Docker
 #
 # 3. Port already in use
 #    Solution: Change PORT in .env or stop conflicting service

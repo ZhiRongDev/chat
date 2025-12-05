@@ -1,17 +1,18 @@
 """
 Pytest configuration and fixtures for backend tests.
 """
+
 import os
 
 # Set up test environment variables before importing app
 os.environ["TESTING"] = "true"  # Enable test mode
 os.environ.setdefault("HOST", "0.0.0.0")
 os.environ.setdefault("PORT", "5000")
-os.environ.setdefault("DB_HOST", "localhost")
-os.environ.setdefault("DB_USER", "test_user")
-os.environ.setdefault("DB_NAME", "test_db")
-os.environ.setdefault("DB_PASSWORD", "test_password")
-os.environ.setdefault("DB_PORT", "5432")
+os.environ.setdefault("POSTGRES_HOST", "localhost")
+os.environ.setdefault("POSTGRES_USER", "test_user")
+os.environ.setdefault("POSTGRES_DB", "test_db")
+os.environ.setdefault("POSTGRES_PASSWORD", "test_password")
+os.environ.setdefault("POSTGRES_PORT", "22463")
 os.environ.setdefault("FRONTEND_HOST", "http://localhost:5173")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-for-testing-only")
 os.environ.setdefault("EXPIRES_DELTA", "30")
@@ -41,6 +42,7 @@ def setup_test_database():
 
     # Override the engine in app.model so services use the test database
     import app.model
+
     original_engine = app.model.engine
     app.model.engine = test_engine
 

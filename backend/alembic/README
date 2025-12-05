@@ -64,10 +64,10 @@ alembic upgrade head
 ## Configuration
 
 The database URL is automatically configured from environment variables:
-- DB_USER
-- DB_PASSWORD
-- DB_HOST
-- DB_PORT
-- DB_NAME
+- POSTGRES_USER
+- POSTGRES_PASSWORD
+- POSTGRES_HOST
+- POSTGRES_PORT
+- POSTGRES_DB
 
 These are read from your `.env` file via `app/config.py`.

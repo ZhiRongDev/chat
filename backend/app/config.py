@@ -12,11 +12,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     HOST: str
     PORT: int
-    DB_USER: str
-    DB_NAME: str
-    DB_PASSWORD: str
-    DB_HOST: str
-    DB_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_DB: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_HOST: str
+    POSTGRES_PORT: int
     FRONTEND_HOST: str
 
     # LLM API Keys (Optional - can be provided by users via frontend)
@@ -32,7 +32,9 @@ class Settings(BaseSettings):
     DEFAULT_LLM_PROVIDER: str = "gemini"  # Options: gemini, openai, anthropic
 
     # Gemini File Search Configuration (for RAG)
-    GEMINI_FILE_SEARCH_MODEL: str = "gemini-2.5-flash"  # Model for RAG queries (gemini-2.5-flash or gemini-2.5-pro)
+    GEMINI_FILE_SEARCH_MODEL: str = (
+        "gemini-2.5-flash"  # Model for RAG queries (gemini-2.5-flash or gemini-2.5-pro)
+    )
     GEMINI_STORE_SIZE_LIMIT_GB: int = 20  # Recommended size limit per store
     GEMINI_MAX_FILE_SIZE_MB: int = 100  # Max file size for upload
 
@@ -43,7 +45,9 @@ class Settings(BaseSettings):
     TOKEN_FILE: str = "app/service/gmail/token.json"
     CREDENTIALS_FILE: str = "app/service/gmail/credentials.json"
     SCOPES: list[str] = ["https://www.googleapis.com/auth/gmail.send"]
-    FROM_EMAIL: str | None = None  # Email address to send from (optional, required only for password reset)
+    FROM_EMAIL: str | None = (
+        None  # Email address to send from (optional, required only for password reset)
+    )
     RESET_TOKEN_EXPIRE_MINUTES: int = 60
 
 

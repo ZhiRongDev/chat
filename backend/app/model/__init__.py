@@ -17,32 +17,38 @@ if os.environ.get("TESTING") != "true":
     try:
         # Connect to default database first
         conn = psycopg2.connect(
-            host=settings.DB_HOST,
-            user=settings.DB_USER,
+            host=settings.POSTGRES_HOST,
+            user=settings.POSTGRES_USER,
             dbname=DEFAULT_DB,
-            password=settings.DB_PASSWORD,
-            port=int(settings.DB_PORT),
+            password=settings.POSTGRES_PASSWORD,
+            port=int(settings.POSTGRES_PORT),
         )
         conn.autocommit = True
 
         with conn.cursor() as cur:
             # Check if target database exists
-            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (settings.DB_NAME,))
+            cur.execute(
+                "SELECT 1 FROM pg_database WHERE datname = %s",
+                (settings.POSTGRES_DB,),
+            )
             if not cur.fetchone():
                 # Use psycopg2.sql for safe identifier quoting
                 from psycopg2 import sql
+
                 cur.execute(
-                    sql.SQL('CREATE DATABASE {}').format(sql.Identifier(settings.DB_NAME))
-                )
-                cur.execute(
-                    sql.SQL('GRANT ALL PRIVILEGES ON DATABASE {} TO {}').format(
-                        sql.Identifier(settings.DB_NAME),
-                        sql.Identifier(settings.DB_USER)
+                    sql.SQL("CREATE DATABASE {}").format(
+                        sql.Identifier(settings.POSTGRES_DB)
                     )
                 )
-                logger.info(f"Database {settings.DB_NAME} created.")
+                cur.execute(
+                    sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {}").format(
+                        sql.Identifier(settings.POSTGRES_DB),
+                        sql.Identifier(settings.POSTGRES_USER),
+                    )
+                )
+                logger.info(f"Database {settings.POSTGRES_DB} created.")
             else:
-                logger.info(f"Database {settings.DB_NAME} already exists.")
+                logger.info(f"Database {settings.POSTGRES_DB} already exists.")
     except Exception as e:
         logger.error(f"Error setting up database: {e}")
         raise
@@ -51,7 +57,7 @@ if os.environ.get("TESTING") != "true":
             conn.close()
 
     # Now connect to your actual target database
-    DATABASE_URL = f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+    DATABASE_URL = f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
 
     engine = create_engine(DATABASE_URL, connect_args={"options": "-c timezone=utc"})
     SQLModel.metadata.create_all(engine)

@@ -30,15 +30,3 @@ services:
       - FRONTEND_HOST=http://localhost  # Production frontend URL for email links
     # Remove volumes in production - use baked-in code from image
     command: gunicorn -c gunicorn.conf.py main:app
-
-  db:
-    restart: always
-    # Don't expose ports externally in production (only via Docker network)
-    # Uncomment if you need external access:
-    # ports:
-    #   - "5432:5432"
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-chat_prod}
-    # Use production volume
-    volumes:
-      - pg_data:/var/lib/postgresql/data

@@ -22,12 +22,6 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      # Override these values for Docker networking
-      - DB_HOST=db
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - app-network
     healthcheck:
@@ -36,30 +30,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  db:
-    image: postgres:16-alpine
-    container_name: postgres_db
-    restart: unless-stopped
-    env_file:
-      - .env
-    ports:
-      - "5433:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    environment:
-      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
-
-volumes:
-  pg_data:
 
 networks:
   app-network:
