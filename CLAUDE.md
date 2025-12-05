@@ -23,7 +23,7 @@ This is a **RAG (Retrieval-Augmented Generation) chat application** that combine
 ### Tech Stack
 
 - **Frontend**: Vue 3, TypeScript, Pinia (state management), Vue Router, Bootstrap 5, Axios
-- **Backend**: FastAPI, SQLModel, PostgreSQL, Redis, JWT authentication, bcrypt
+- **Backend**: FastAPI, SQLModel, PostgreSQL, JWT authentication, bcrypt
 - **Infrastructure**: Docker Compose, Nginx (production), Gunicorn
 - **AI/ML**:
   - LLMs: Gemini API, OpenAI, Anthropic (via Langchain)
@@ -91,7 +91,7 @@ npm run test:e2e -- --debug  # Debug mode
 ### Docker
 
 ```bash
-# Start all services (frontend, backend, PostgreSQL, Redis)
+# Start all services (frontend, backend, PostgreSQL)
 docker-compose up
 
 # Build and start
@@ -122,7 +122,6 @@ docker-compose logs -f frontend
   - `chat_model.py`: Chat history and messages
   - `document_model.py`: Document metadata, chunks, and vector store config
 - **Database**: PostgreSQL via docker-compose (port 5432)
-- **Caching**: Redis via docker-compose (port 6379)
 - **Vector Store**: FAISS/ChromaDB for document embeddings (stored in `data/vector_stores/`)
 
 ### Authentication & Authorization
@@ -154,7 +153,7 @@ docker-compose logs -f frontend
 
 - **Settings**: Pydantic BaseSettings in `app/config.py`
 - **Environment variables**: Loaded from `.env` file
-- **Required env vars**: DB credentials, Redis config, SECRET_KEY, GEMINI_API_KEY, FRONTEND_HOST
+- **Required env vars**: DB credentials, SECRET_KEY, GEMINI_API_KEY, FRONTEND_HOST
 - **Template**: Use `.env.template` as reference
 
 ### Services Layer

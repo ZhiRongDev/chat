@@ -117,7 +117,6 @@ check_port() {
 check_port 5173 "Frontend Dev"
 check_port 5000 "Backend"
 check_port 5432 "PostgreSQL"
-check_port 6379 "Redis"
 check_port 80 "Frontend Prod"
 echo ""
 

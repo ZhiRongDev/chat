@@ -83,14 +83,6 @@ make prod
 | `DB_NAME` | `chat_dev` | `chat_prod` | Database name |
 | `DB_PORT` | `5432` | `5432` | Database port |
 
-### Redis Configuration
-
-| Variable | Development | Production | Description |
-|----------|------------|------------|-------------|
-| `REDIS_HOST` | `redis` | `redis` | Use `redis` for Docker, `localhost` for local |
-| `REDIS_PORT` | `6379` | `6379` | Redis port |
-| `REDIS_DB` | `0` | `0` | Redis database number |
-
 ### CORS Configuration
 
 | Variable | Description | Example |
@@ -258,7 +250,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Setup database (requires PostgreSQL installed)
-# Update .env: DB_HOST=localhost, REDIS_HOST=localhost
+# Update .env with DB_HOST=localhost
 
 # Run migrations
 alembic upgrade head

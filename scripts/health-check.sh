@@ -51,19 +51,10 @@ else
 fi
 echo ""
 
-# Check Redis
-echo "📦 Redis Health:"
-if docker-compose $COMPOSE_FILES exec -T redis redis-cli ping | grep -q PONG; then
-    echo "   ✅ Redis is responding"
-else
-    echo "   ❌ Redis is not responding"
-fi
-echo ""
-
 # Resource usage
 echo "💻 Resource Usage:"
 docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}" \
-    frontend backend postgres_db redis 2>/dev/null || echo "   (Container stats unavailable)"
+    frontend backend postgres_db 2>/dev/null || echo "   (Container stats unavailable)"
 echo ""
 
 echo "✅ Health check complete!"

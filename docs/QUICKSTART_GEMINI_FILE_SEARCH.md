@@ -6,7 +6,6 @@ This guide gets you up and running with the new Gemini File Search RAG system in
 
 - Python 3.10+
 - PostgreSQL database running
-- Redis running
 - Gemini API key ([Get one here](https://makersuite.google.com/app/apikey))
 
 ## Step 1: Configure Environment

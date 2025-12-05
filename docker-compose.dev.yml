@@ -41,13 +41,5 @@ services:
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-chat_dev}
 
-  redis:
-    ports:
-      - "6379:6379"
-    # Use a development-specific volume
-    volumes:
-      - redis_data_dev:/data
-
 volumes:
   pg_data_dev:
-  redis_data_dev:

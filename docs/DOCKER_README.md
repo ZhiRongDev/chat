@@ -34,7 +34,6 @@ Access:
 - Frontend: http://localhost:5173 (with hot-reload)
 - Backend: http://localhost:5000
 - PostgreSQL: localhost:5432
-- Redis: localhost:6379
 
 ### Production
 
@@ -75,7 +74,6 @@ Access:
 1. **Frontend**: Vue 3 SPA served via Nginx (prod) or Vite dev server (dev)
 2. **Backend**: FastAPI application with Uvicorn (dev) or Gunicorn (prod)
 3. **PostgreSQL**: Database with health checks
-4. **Redis**: Cache and session store
 
 ### Networks
 All services communicate via the `app-network` bridge network.
@@ -188,7 +186,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale ba
 make health ENV=prod
 
 # View resource usage
-docker stats frontend backend postgres_db redis
+docker stats frontend backend postgres_db
 
 # View logs
 make logs ENV=prod

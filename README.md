@@ -32,7 +32,6 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ### Backend
 - **Framework**: FastAPI with Uvicorn/Gunicorn
 - **Database**: PostgreSQL 16 with SQLModel ORM
-- **Cache**: Redis 7
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **AI/ML**:
   - LLM Providers: Gemini, OpenAI, Anthropic (via Langchain)
@@ -94,7 +93,6 @@ nano .env  # or use your preferred editor
 ```bash
 # Database (use these values for Docker)
 DB_HOST=db
-REDIS_HOST=redis
 
 # API Keys (add at least one)
 GEMINI_API_KEY=your-gemini-api-key-here
@@ -133,7 +131,6 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
 - **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
 
 #### 5. Stop the Application
 
@@ -197,24 +194,19 @@ nano .env  # Configure for local development
 
 ```bash
 DB_HOST=localhost
-REDIS_HOST=localhost
 # ... add your API keys
 ```
 
-**Start PostgreSQL and Redis locally:**
+**Start PostgreSQL locally:**
 
 ```bash
-# Using Docker for just the databases
+# Using Docker for just the database
 docker run -d -p 5432:5432 \
   -e POSTGRES_USER=postgres \
   -e POSTGRES_PASSWORD=postgres \
   -e POSTGRES_DB=chat_dev \
   --name postgres_local \
   postgres:16-alpine
-
-docker run -d -p 6379:6379 \
-  --name redis_local \
-  redis:7-alpine
 ```
 
 **Run the backend:**
@@ -437,20 +429,6 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml down -v
 docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 ```
 
-### Working with Redis
-
-#### Access Redis CLI
-
-```bash
-# Via Docker
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml exec redis redis-cli
-
-# Commands
-KEYS *           # List all keys
-GET key_name     # Get value
-FLUSHALL         # Clear all data (use with caution!)
-```
-
 ### API Development
 
 #### API Documentation
@@ -632,7 +610,7 @@ npm run test:e2e -- --ui
 
 The project uses GitHub Actions for automated testing:
 
-- **Backend Tests**: Run with PostgreSQL and Redis services
+- **Backend Tests**: Run with PostgreSQL service
 - **Frontend Unit Tests**: Vitest with coverage reporting
 - **Frontend E2E Tests**: Playwright on multiple browsers
 - **Linting & Formatting**: ESLint, Prettier, Black, isort

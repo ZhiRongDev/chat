@@ -18,9 +18,6 @@ class Settings(BaseSettings):
     DB_HOST: str
     DB_PORT: int
     FRONTEND_HOST: str
-    REDIS_HOST: str
-    REDIS_PORT: int
-    REDIS_DB: int
 
     # LLM API Keys (Optional - can be provided by users via frontend)
     GEMINI_API_KEY: str | None = None

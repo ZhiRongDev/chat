@@ -169,7 +169,7 @@ The project uses GitHub Actions for continuous integration. The main workflow (`
 #### Jobs
 
 1. **backend-tests**
-   - Runs pytest with PostgreSQL and Redis services
+   - Runs pytest with PostgreSQL service
    - Generates coverage reports
    - Uploads coverage to Codecov
 

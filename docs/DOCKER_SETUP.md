@@ -37,7 +37,6 @@ docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 - **Backend API**: http://localhost:5000
 - **API Docs**: http://localhost:5000/docs
 - **PostgreSQL**: localhost:5432
-- **Redis**: localhost:6379
 
 ## What's Changed (Gemini File Search Migration)
 
@@ -216,24 +215,16 @@ Production mode uses:
                            │
                 ┌──────────┴──────────┐
                 │                     │
-         ┌──────▼──────┐      ┌──────▼──────┐
-         │  PostgreSQL │      │    Redis    │
-         │  Port: 5432 │      │  Port: 6379 │
-         └─────────────┘      └─────────────┘
-                │
-                │
-         ┌──────▼──────────────┐
-         │  Gemini File Search │
-         │  (Google Cloud)     │
-         └─────────────────────┘
+         ┌──────▼──────┐      ┌──────▼──────────────┐
+         │  PostgreSQL │      │  Gemini File Search │
+         │  Port: 5432 │      │  (Google Cloud)     │
+         └─────────────┘      └─────────────────────┘
 ```
 
 ### Volumes
 
 - `pg_data_dev` - PostgreSQL data (development)
-- `redis_data_dev` - Redis data (development)
 - `pg_data` - PostgreSQL data (production)
-- `redis_data` - Redis data (production)
 
 **Note**: Vector store volumes have been removed as Gemini File Search handles all storage.
 
@@ -277,11 +268,6 @@ DB_HOST=db                               # 'db' for Docker, 'localhost' for loca
 DB_USER=postgres
 DB_NAME=chat_dev
 DB_PORT=5432
-
-# Redis
-REDIS_HOST=redis                         # 'redis' for Docker, 'localhost' for local
-REDIS_PORT=6379
-REDIS_DB=0
 ```
 
 ## Troubleshooting
@@ -358,7 +344,7 @@ make rebuild
 
 1. **Hot Reload**: Changes to source code automatically reload
 2. **Volume Mounts**: Code changes reflect immediately without rebuilding
-3. **Separate Volumes**: Development uses separate DB/Redis volumes
+3. **Separate Volumes**: Development uses separate DB volumes
 
 ### Production
 

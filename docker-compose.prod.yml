@@ -42,22 +42,3 @@ services:
     # Use production volume
     volumes:
       - pg_data:/var/lib/postgresql/data
-
-  redis:
-    restart: always
-    # Don't expose ports externally in production
-    # Uncomment if you need external access:
-    # ports:
-    #   - "6379:6379"
-    # Use production volume
-    volumes:
-      - redis_data:/data
-    # Production-optimized Redis config
-    command: >
-      redis-server
-      --appendonly yes
-      --appendfsync everysec
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-      --tcp-backlog 511
-      --timeout 300
