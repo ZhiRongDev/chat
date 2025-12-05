@@ -53,7 +53,7 @@ COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
 # Create nginx configuration that serves frontend and proxies API to backend
 RUN echo 'server {\n\
-    listen 80;\n\
+    listen 8080;\n\
     server_name _;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
@@ -105,9 +105,10 @@ RUN echo 'server {\n\
     }\n\
 }' > /etc/nginx/sites-available/default
 
-# Remove default nginx config
+# Remove default nginx config and update nginx.conf to use port 8080
 RUN rm -f /etc/nginx/sites-enabled/default && \
-    ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+    ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default && \
+    sed -i 's/listen 80/listen 8080/g' /etc/nginx/nginx.conf || true
 
 # Create startup script that runs both nginx and backend
 RUN echo '#!/bin/bash\n\
@@ -130,12 +131,12 @@ echo "Starting FastAPI backend..."\n\
 exec gunicorn -c gunicorn.conf.py main:app\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 
-# Expose port 80 for HTTP (Zeabur will handle HTTPS)
-EXPOSE 80
+# Expose port 8080 for HTTP (Zeabur requirement)
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost/health && curl -f http://localhost:5000/api/v1/health || exit 1
+    CMD curl -f http://localhost:8080/health && curl -f http://localhost:5000/api/v1/health || exit 1
 
 # Set working directory to backend for the application
 WORKDIR /app/backend
