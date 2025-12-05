@@ -51,9 +51,6 @@ COPY ./backend ./backend
 # Copy frontend build from frontend-build stage
 COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY ./docker/frontend/nginx.conf /etc/nginx/sites-available/frontend.conf
-
 # Create nginx configuration that serves frontend and proxies API to backend
 RUN echo 'server {\n\
     listen 80;\n\
