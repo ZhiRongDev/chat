@@ -38,5 +38,35 @@ yarn-error.log*
 
 # Docker
 docker-compose*.yml
-Dockerfile*
+docker/
 .dockerignore
+
+# Frontend Development
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/
+frontend/.playwright/
+
+# Backend Development
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.pytest_cache/
+backend/htmlcov/
+backend/.coverage
+backend/data/vector_stores/
+backend/data/uploads/
+
+# Testing
+tests/
+e2e/
+*.test.ts
+*.spec.ts
+test-results/
+coverage/
+
+# Scripts
+scripts/
