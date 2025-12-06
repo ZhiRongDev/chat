@@ -332,27 +332,34 @@ async def ingest_url(
 @auth_router.get("/", response_model=List[DocumentListResponse])
 async def list_documents(
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
     limit: int = 100,
     offset: int = 0,
 ):
     """
-    List all documents for authenticated user
+    List all documents for authenticated user in the current API key's store
 
     Args:
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (filters by this key's store)
         limit: Maximum number of documents to return
         offset: Offset for pagination
 
     Returns:
-        List of documents
+        List of documents from the current API key's store
     """
-    # Don't require Gemini API key for listing documents (DB-only operation)
-    gemini_service = GeminiFileSearchService(require_api_key=False)
+    # Use user-provided API key if available, otherwise use server config
+    gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
     with Session(app.model.engine) as session:
+        # Get the user's store for the current API key
+        store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        # List documents from this specific store
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
+            store_id=store.id,
             limit=limit,
             offset=offset
         )
@@ -484,23 +491,30 @@ async def delete_document(
 @auth_router.get("/stats/overview", response_model=DocumentStatsResponse)
 async def get_document_stats(
     current_user: User = Depends(get_current_user),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
-    Get document statistics for user
+    Get document statistics for user in the current API key's store
 
     Args:
         current_user: Authenticated user
+        x_gemini_api_key: Optional Gemini API key via header (filters by this key's store)
 
     Returns:
-        Document statistics
+        Document statistics from the current API key's store
     """
-    # Don't require Gemini API key for stats (DB-only operation)
-    gemini_service = GeminiFileSearchService(require_api_key=False)
+    # Use user-provided API key if available, otherwise use server config
+    gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
 
     with Session(app.model.engine) as session:
+        # Get the user's store for the current API key
+        store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        # Get documents from this specific store
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
+            store_id=store.id,
             limit=10000  # Get all for stats
         )
 
