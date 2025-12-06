@@ -399,7 +399,7 @@ const uploadFile = async () => {
       headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
     }
 
-    await api.post('/api/v1/documents/upload', formData, { headers })
+    await api.post('/documents/upload', formData, { headers })
 
     uploadStatus.value = {
       type: 'success',
@@ -436,7 +436,7 @@ const uploadText = async () => {
       headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
     }
 
-    await api.post('/api/v1/documents/ingest/text', {
+    await api.post('/documents/ingest/text', {
       title: textDocument.value.title,
       content: textDocument.value.content,
     }, Object.keys(headers).length > 0 ? { headers } : undefined)
@@ -473,7 +473,7 @@ const fetchDocuments = async () => {
       return
     }
 
-    const response = await api.get('/api/v1/documents/')
+    const response = await api.get('/documents')
     documents.value = response.data
   } catch (error: any) {
     console.error('Error fetching documents:', error)
@@ -518,7 +518,7 @@ const deleteDocument = async (documentId: string) => {
       headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
     }
 
-    await api.delete(`/api/v1/documents/${documentId}`, Object.keys(headers).length > 0 ? { headers } : undefined)
+    await api.delete(`/documents/${documentId}`, Object.keys(headers).length > 0 ? { headers } : undefined)
 
     uploadStatus.value = {
       type: 'success',

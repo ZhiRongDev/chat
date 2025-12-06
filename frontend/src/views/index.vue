@@ -556,7 +556,7 @@ const sendMessage = async () => {
     }
 
     // use /chat/ but not /chat to prevent HTTP & HTTPS mixup errors (Dont know why this is needed) 
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/`, {
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
