@@ -480,7 +480,7 @@ const fetchDocuments = async () => {
       headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
     }
 
-    const response = await api.get('/documents', Object.keys(headers).length > 0 ? { headers } : undefined)
+    const response = await api.get('/documents/', Object.keys(headers).length > 0 ? { headers } : undefined)
     documents.value = response.data
   } catch (error: any) {
     console.error('Error fetching documents:', error)
