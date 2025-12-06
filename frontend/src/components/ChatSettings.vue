@@ -390,11 +390,16 @@ const uploadFile = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 
-    await api.post('/api/v1/documents/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
+    const headers: Record<string, string> = {
+      'Content-Type': 'multipart/form-data',
+    }
+
+    // Add Gemini API key header if available
+    if (localSettings.value.geminiApiKey) {
+      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
+    }
+
+    await api.post('/api/v1/documents/upload', formData, { headers })
 
     uploadStatus.value = {
       type: 'success',
@@ -424,10 +429,17 @@ const uploadText = async () => {
   uploadStatus.value = null
 
   try {
+    const headers: Record<string, string> = {}
+
+    // Add Gemini API key header if available
+    if (localSettings.value.geminiApiKey) {
+      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
+    }
+
     await api.post('/api/v1/documents/ingest/text', {
       title: textDocument.value.title,
       content: textDocument.value.content,
-    })
+    }, Object.keys(headers).length > 0 ? { headers } : undefined)
 
     uploadStatus.value = {
       type: 'success',
@@ -499,7 +511,14 @@ const confirmDeleteDocument = (documentId: string) => {
 
 const deleteDocument = async (documentId: string) => {
   try {
-    await api.delete(`/api/v1/documents/${documentId}`)
+    const headers: Record<string, string> = {}
+
+    // Add Gemini API key header if available
+    if (localSettings.value.geminiApiKey) {
+      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
+    }
+
+    await api.delete(`/api/v1/documents/${documentId}`, Object.keys(headers).length > 0 ? { headers } : undefined)
 
     uploadStatus.value = {
       type: 'success',

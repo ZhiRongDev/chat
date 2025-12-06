@@ -47,22 +47,30 @@ export interface IngestUrlPayload {
   metadata?: Record<string, any>
 }
 
+export interface DocumentApiOptions {
+  geminiApiKey?: string
+}
+
 export const documentsApi = {
   /**
    * Upload a document file (PDF, TXT, MD)
    */
-  uploadDocument: async (file: File): Promise<UploadDocumentResponse> => {
+  uploadDocument: async (file: File, options?: DocumentApiOptions): Promise<UploadDocumentResponse> => {
     const formData = new FormData()
     formData.append('file', file)
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'multipart/form-data',
+    }
+
+    if (options?.geminiApiKey) {
+      headers['x-gemini-api-key'] = options.geminiApiKey
+    }
 
     const response = await api.post<UploadDocumentResponse>(
       '/documents/upload',
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
+      { headers }
     )
     return response.data
   },
@@ -70,10 +78,17 @@ export const documentsApi = {
   /**
    * Ingest text content directly
    */
-  ingestText: async (payload: IngestTextPayload): Promise<UploadDocumentResponse> => {
+  ingestText: async (payload: IngestTextPayload, options?: DocumentApiOptions): Promise<UploadDocumentResponse> => {
+    const headers: Record<string, string> = {}
+
+    if (options?.geminiApiKey) {
+      headers['x-gemini-api-key'] = options.geminiApiKey
+    }
+
     const response = await api.post<UploadDocumentResponse>(
       '/documents/ingest/text',
-      payload
+      payload,
+      Object.keys(headers).length > 0 ? { headers } : undefined
     )
     return response.data
   },
@@ -81,10 +96,17 @@ export const documentsApi = {
   /**
    * Ingest content from a URL
    */
-  ingestUrl: async (payload: IngestUrlPayload): Promise<UploadDocumentResponse> => {
+  ingestUrl: async (payload: IngestUrlPayload, options?: DocumentApiOptions): Promise<UploadDocumentResponse> => {
+    const headers: Record<string, string> = {}
+
+    if (options?.geminiApiKey) {
+      headers['x-gemini-api-key'] = options.geminiApiKey
+    }
+
     const response = await api.post<UploadDocumentResponse>(
       '/documents/ingest/url',
-      payload
+      payload,
+      Object.keys(headers).length > 0 ? { headers } : undefined
     )
     return response.data
   },
@@ -113,8 +135,14 @@ export const documentsApi = {
   /**
    * Delete a document and all its chunks
    */
-  deleteDocument: async (documentId: string): Promise<void> => {
-    await api.delete(`/documents/${documentId}`)
+  deleteDocument: async (documentId: string, options?: DocumentApiOptions): Promise<void> => {
+    const headers: Record<string, string> = {}
+
+    if (options?.geminiApiKey) {
+      headers['x-gemini-api-key'] = options.geminiApiKey
+    }
+
+    await api.delete(`/documents/${documentId}`, Object.keys(headers).length > 0 ? { headers } : undefined)
   },
 
   /**
@@ -122,6 +150,20 @@ export const documentsApi = {
    */
   getStats: async (): Promise<DocumentStats> => {
     const response = await api.get<DocumentStats>('/documents/stats/overview')
+    return response.data
+  },
+
+  /**
+   * Get store information
+   */
+  getStoreInfo: async (options?: DocumentApiOptions): Promise<any> => {
+    const headers: Record<string, string> = {}
+
+    if (options?.geminiApiKey) {
+      headers['x-gemini-api-key'] = options.geminiApiKey
+    }
+
+    const response = await api.get('/documents/stores/info', Object.keys(headers).length > 0 ? { headers } : undefined)
     return response.data
   },
 }

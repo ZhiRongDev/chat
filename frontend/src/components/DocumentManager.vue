@@ -120,7 +120,7 @@
               />
               <i class="bi bi-cloud-upload"></i>
               <p>Drag and drop a file here, or</p>
-              <button class="btn btn-outline-primary" @click="$refs.fileInput.click()">
+              <button class="btn btn-outline-primary" @click="fileInput?.click()">
                 Choose File
               </button>
               <small class="text-muted">Supported: PDF, TXT, MD (Max 10MB)</small>
@@ -245,6 +245,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { documentsApi, type Document, type DocumentDetail, type DocumentStats } from '@/api/documents'
 
+const props = defineProps<{
+  geminiApiKey?: string
+}>()
+
 const documents = ref<Document[]>([])
 const stats = ref<DocumentStats | null>(null)
 const loading = ref(false)
@@ -257,6 +261,7 @@ const uploadError = ref('')
 // Upload form state
 const uploadTab = ref<'file' | 'text' | 'url'>('file')
 const selectedFile = ref<File | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const textTitle = ref('')
 const textContent = ref('')
 const urlInput = ref('')
@@ -311,18 +316,20 @@ const handleUpload = async () => {
   uploading.value = true
 
   try {
+    const options = props.geminiApiKey ? { geminiApiKey: props.geminiApiKey } : undefined
+
     if (uploadTab.value === 'file' && selectedFile.value) {
-      await documentsApi.uploadDocument(selectedFile.value)
+      await documentsApi.uploadDocument(selectedFile.value, options)
     } else if (uploadTab.value === 'text') {
       await documentsApi.ingestText({
         title: textTitle.value,
         content: textContent.value,
-      })
+      }, options)
     } else if (uploadTab.value === 'url') {
       await documentsApi.ingestUrl({
         url: urlInput.value,
         title: urlTitle.value || undefined,
-      })
+      }, options)
     }
 
     closeUploadModal()
@@ -350,7 +357,8 @@ const deleteDocument = async (doc: Document) => {
   if (!confirm(`Are you sure you want to delete "${doc.title}"?`)) return
 
   try {
-    await documentsApi.deleteDocument(doc.id)
+    const options = props.geminiApiKey ? { geminiApiKey: props.geminiApiKey } : undefined
+    await documentsApi.deleteDocument(doc.id, options)
     await loadDocuments()
     await loadStats()
   } catch (error: any) {
