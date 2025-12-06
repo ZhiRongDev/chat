@@ -25,27 +25,15 @@
 
       <div class="setting-item">
         <label for="model">Model (optional)</label>
-        <input
-          v-model="localSettings.model"
-          type="text"
-          class="form-control"
-          id="model"
-          placeholder="e.g., gpt-4, gemini-pro, gemini-2.5-flash-lite"
-        />
+        <input v-model="localSettings.model" type="text" class="form-control" id="model"
+          placeholder="e.g., gpt-4, gemini-pro, gemini-2.5-flash-lite" />
         <small class="text-muted"> Leave empty to use provider's default model </small>
       </div>
 
       <div class="setting-item">
         <label for="temperature">Temperature: {{ localSettings.temperature.toFixed(1) }}</label>
-        <input
-          v-model.number="localSettings.temperature"
-          type="range"
-          class="form-range"
-          id="temperature"
-          min="0"
-          max="2"
-          step="0.1"
-        />
+        <input v-model.number="localSettings.temperature" type="range" class="form-range" id="temperature" min="0"
+          max="2" step="0.1" />
         <small class="text-muted"> Lower = more focused, Higher = more creative (0.0-2.0) </small>
       </div>
     </div>
@@ -62,16 +50,9 @@
       </small>
 
       <div class="setting-item">
-        <label for="geminiApiKey"
-          >Google Gemini API Key <span class="text-danger">*Required for RAG</span></label
-        >
-        <input
-          v-model="localSettings.geminiApiKey"
-          type="password"
-          class="form-control"
-          id="geminiApiKey"
-          placeholder="Enter your Gemini API key"
-        />
+        <label for="geminiApiKey">Google Gemini API Key <span class="text-danger">*Required for RAG</span></label>
+        <input v-model="localSettings.geminiApiKey" type="password" class="form-control" id="geminiApiKey"
+          placeholder="Enter your Gemini API key" />
         <small class="text-muted">
           Get your API key from
           <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
@@ -80,13 +61,8 @@
 
       <div class="setting-item">
         <label for="openaiApiKey">OpenAI API Key</label>
-        <input
-          v-model="localSettings.openaiApiKey"
-          type="password"
-          class="form-control"
-          id="openaiApiKey"
-          placeholder="Enter your OpenAI API key"
-        />
+        <input v-model="localSettings.openaiApiKey" type="password" class="form-control" id="openaiApiKey"
+          placeholder="Enter your OpenAI API key" />
         <small class="text-muted">
           Get your API key from
           <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
@@ -95,18 +71,11 @@
 
       <div class="setting-item">
         <label for="anthropicApiKey">Anthropic Claude API Key</label>
-        <input
-          v-model="localSettings.anthropicApiKey"
-          type="password"
-          class="form-control"
-          id="anthropicApiKey"
-          placeholder="Enter your Anthropic API key"
-        />
+        <input v-model="localSettings.anthropicApiKey" type="password" class="form-control" id="anthropicApiKey"
+          placeholder="Enter your Anthropic API key" />
         <small class="text-muted">
           Get your API key from
-          <a href="https://console.anthropic.com/settings/keys" target="_blank"
-            >Anthropic Console</a
-          >
+          <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic Console</a>
         </small>
       </div>
     </div>
@@ -122,12 +91,7 @@
         <div class="setting-header">
           <label class="form-check-label"> Enable RAG Mode </label>
           <div class="form-check form-switch">
-            <input
-              v-model="localSettings.useRag"
-              class="form-check-input"
-              type="checkbox"
-              id="ragToggle"
-            />
+            <input v-model="localSettings.useRag" class="form-check-input" type="checkbox" id="ragToggle" />
           </div>
         </div>
         <small class="text-muted">
@@ -143,18 +107,9 @@
         </div>
 
         <div class="setting-item">
-          <label for="maxOutputTokens"
-            >Max Response Length: {{ localSettings.maxOutputTokens }}</label
-          >
-          <input
-            v-model.number="localSettings.maxOutputTokens"
-            type="range"
-            class="form-range"
-            id="maxOutputTokens"
-            min="512"
-            max="8192"
-            step="256"
-          />
+          <label for="maxOutputTokens">Max Response Length: {{ localSettings.maxOutputTokens }}</label>
+          <input v-model.number="localSettings.maxOutputTokens" type="range" class="form-range" id="maxOutputTokens"
+            min="512" max="8192" step="256" />
           <small class="text-muted">
             Maximum tokens in RAG response (512-8192). Higher = longer, more detailed responses.
           </small>
@@ -169,12 +124,7 @@
           <i class="bi bi-folder"></i>
           Document Library
         </h5>
-        <button
-          class="btn-refresh"
-          @click="fetchDocuments"
-          :disabled="loadingDocuments"
-          title="Refresh document list"
-        >
+        <button class="btn-refresh" @click="fetchDocuments" :disabled="loadingDocuments" title="Refresh document list">
           <i :class="['bi bi-arrow-clockwise', { spinning: loadingDocuments }]"></i>
         </button>
       </div>
@@ -206,11 +156,7 @@
             </div>
           </div>
           <div class="document-actions">
-            <button
-              class="btn-action btn-delete"
-              @click="confirmDeleteDocument(doc.id)"
-              title="Delete document"
-            >
+            <button class="btn-action btn-delete" @click="confirmDeleteDocument(doc.id)" title="Delete document">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -235,17 +181,11 @@
       <!-- Upload Section -->
       <div class="upload-section">
         <div class="upload-tabs">
-          <button
-            :class="['tab-btn', { active: uploadTab === 'file' }]"
-            @click="uploadTab = 'file'"
-          >
+          <button :class="['tab-btn', { active: uploadTab === 'file' }]" @click="uploadTab = 'file'">
             <i class="bi bi-file-earmark-arrow-up"></i>
             Upload File
           </button>
-          <button
-            :class="['tab-btn', { active: uploadTab === 'text' }]"
-            @click="uploadTab = 'text'"
-          >
+          <button :class="['tab-btn', { active: uploadTab === 'text' }]" @click="uploadTab = 'text'">
             <i class="bi bi-file-text"></i>
             Add Text
           </button>
@@ -253,19 +193,9 @@
 
         <!-- File Upload Tab -->
         <div v-if="uploadTab === 'file'" class="upload-content">
-          <div
-            class="file-upload-area"
-            @click="triggerFileInput"
-            @dragover.prevent
-            @drop.prevent="handleFileDrop"
-          >
-            <input
-              ref="fileInput"
-              type="file"
-              accept=".pdf,.txt,.md,.docx,.json,.csv"
-              @change="handleFileSelect"
-              style="display: none"
-            />
+          <div class="file-upload-area" @click="triggerFileInput" @dragover.prevent @drop.prevent="handleFileDrop">
+            <input ref="fileInput" type="file" accept=".pdf,.txt,.md,.docx,.json,.csv" @change="handleFileSelect"
+              style="display: none" />
             <i class="bi bi-cloud-upload"></i>
             <p>Click to upload or drag and drop</p>
             <small class="text-muted">Supports PDF, TXT, MD, DOCX, JSON, CSV (max 100MB)</small>
@@ -277,12 +207,7 @@
               <i class="bi bi-x"></i>
             </button>
           </div>
-          <button
-            v-if="selectedFile"
-            class="btn btn-primary w-100 mt-3"
-            @click="uploadFile"
-            :disabled="uploading"
-          >
+          <button v-if="selectedFile" class="btn btn-primary w-100 mt-3" @click="uploadFile" :disabled="uploading">
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Uploading...' : 'Upload Document' }}
           </button>
@@ -292,29 +217,16 @@
         <div v-if="uploadTab === 'text'" class="upload-content">
           <div class="setting-item">
             <label for="textTitle">Document Title</label>
-            <input
-              v-model="textDocument.title"
-              type="text"
-              class="form-control"
-              id="textTitle"
-              placeholder="Enter document title"
-            />
+            <input v-model="textDocument.title" type="text" class="form-control" id="textTitle"
+              placeholder="Enter document title" />
           </div>
           <div class="setting-item">
             <label for="textContent">Content</label>
-            <textarea
-              v-model="textDocument.content"
-              class="form-control"
-              id="textContent"
-              rows="6"
-              placeholder="Paste or type your content here..."
-            ></textarea>
+            <textarea v-model="textDocument.content" class="form-control" id="textContent" rows="6"
+              placeholder="Paste or type your content here..."></textarea>
           </div>
-          <button
-            class="btn btn-primary w-100"
-            @click="uploadText"
-            :disabled="!textDocument.title || !textDocument.content || uploading"
-          >
+          <button class="btn btn-primary w-100" @click="uploadText"
+            :disabled="!textDocument.title || !textDocument.content || uploading">
             <span v-if="uploading" class="spinner-border spinner-border-sm me-2"></span>
             {{ uploading ? 'Adding...' : 'Add Document' }}
           </button>
@@ -322,11 +234,8 @@
 
         <!-- Upload Status -->
         <div v-if="uploadStatus" :class="['upload-status', uploadStatus.type]">
-          <i
-            :class="
-              uploadStatus.type === 'success' ? 'bi bi-check-circle' : 'bi bi-exclamation-circle'
-            "
-          ></i>
+          <i :class="uploadStatus.type === 'success' ? 'bi bi-check-circle' : 'bi bi-exclamation-circle'
+            "></i>
           {{ uploadStatus.message }}
         </div>
       </div>
@@ -350,6 +259,7 @@
 import { ref, watch, computed } from 'vue'
 import { appendAlert } from '@/utils/alert'
 import { useUserStore } from '@/stores/user'
+import api from '@/api/service'
 
 export interface ChatSettings {
   useRag: boolean
@@ -480,16 +390,11 @@ const uploadFile = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 
-    const response = await fetch('http://localhost:5000/api/v1/documents/upload', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include', // Send cookies for authentication
+    await api.post('/api/v1/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.detail || errorData.message || 'Upload failed')
-    }
 
     uploadStatus.value = {
       type: 'success',
@@ -500,7 +405,7 @@ const uploadFile = async () => {
     console.error('Upload error:', error)
     uploadStatus.value = {
       type: 'error',
-      message: error.message || 'Failed to upload document. Please try again.',
+      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to upload document. Please try again.',
     }
   } finally {
     uploading.value = false
@@ -519,24 +424,10 @@ const uploadText = async () => {
   uploadStatus.value = null
 
   try {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    const response = await fetch('http://localhost:5000/api/v1/documents/ingest/text', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        title: textDocument.value.title,
-        content: textDocument.value.content,
-      }),
-      credentials: 'include', // Send cookies for authentication
+    await api.post('/api/v1/documents/ingest/text', {
+      title: textDocument.value.title,
+      content: textDocument.value.content,
     })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.detail || errorData.message || 'Upload failed')
-    }
 
     uploadStatus.value = {
       type: 'success',
@@ -547,7 +438,7 @@ const uploadText = async () => {
     console.error('Upload error:', error)
     uploadStatus.value = {
       type: 'error',
-      message: error.message || 'Failed to add document. Please try again.',
+      message: error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to add document. Please try again.',
     }
   } finally {
     uploading.value = false
@@ -570,25 +461,16 @@ const fetchDocuments = async () => {
       return
     }
 
-    const response = await fetch('http://localhost:5000/api/v1/documents/', {
-      method: 'GET',
-      credentials: 'include', // Send cookies for authentication
-    })
-
-    if (!response.ok) {
-      // If unauthorized, clear documents silently
-      if (response.status === 401) {
-        documents.value = []
-        return
-      }
-      throw new Error('Failed to fetch documents')
-    }
-
-    documents.value = await response.json()
+    const response = await api.get('/api/v1/documents/')
+    documents.value = response.data
   } catch (error: any) {
     console.error('Error fetching documents:', error)
     documents.value = []
     // Don't show error message if not authenticated
+    if (error.response?.status === 401) {
+      // Unauthorized, just clear documents silently
+      return
+    }
     const token = localStorage.getItem('token')
     if (token) {
       uploadStatus.value = {
@@ -617,14 +499,7 @@ const confirmDeleteDocument = (documentId: string) => {
 
 const deleteDocument = async (documentId: string) => {
   try {
-    const response = await fetch(`http://localhost:5000/api/v1/documents/${documentId}`, {
-      method: 'DELETE',
-      credentials: 'include', // Send cookies for authentication
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to delete document')
-    }
+    await api.delete(`/api/v1/documents/${documentId}`)
 
     uploadStatus.value = {
       type: 'success',
@@ -634,7 +509,7 @@ const deleteDocument = async (documentId: string) => {
     console.error('Error deleting document:', error)
     uploadStatus.value = {
       type: 'error',
-      message: 'Failed to delete document',
+      message: error.response?.data?.detail || error.response?.data?.message || 'Failed to delete document',
     }
   } finally {
     deleteConfirmId.value = null
@@ -915,7 +790,7 @@ fetchDocuments()
   margin-bottom: 0.5rem;
 }
 
-.document-header > i {
+.document-header>i {
   font-size: 1.5rem;
   flex-shrink: 0;
   margin-top: 0.1rem;

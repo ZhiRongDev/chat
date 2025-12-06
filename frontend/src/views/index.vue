@@ -1,16 +1,8 @@
 <template>
   <div class="app-container">
     <!-- Sidebar -->
-    <Sidebar
-      :is-open="sidebarOpen"
-      :chat-histories="chatHistories"
-      :current-chat-id="currentChatId"
-      @new-chat="newChat"
-      @load-chat="loadChat"
-      @delete-chat="deleteChat"
-      @logout="handleLogout"
-      @show-modal="showModal"
-    />
+    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId" @new-chat="newChat"
+      @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout" @show-modal="showModal" />
 
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -18,12 +10,7 @@
       <div class="header">
         <button class="menu-btn" @click="toggleSidebar">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
         </button>
         <div class="header-title">Chat</div>
@@ -33,23 +20,12 @@
       <!-- Messages -->
       <div class="messages-container" ref="messagesContainer">
         <div class="messages-wrapper">
-          <div
-            v-for="(msg, index) in messages"
-            :key="msg.id || index"
-            class="message-group"
-            :class="msg.sender"
-          >
-            <div
-              class="message-bubble"
-              :class="{ thinking: msg.sender === 'bot' && msg.id === streamingMessageId }"
-            >
+          <div v-for="(msg, index) in messages" :key="msg.id || index" class="message-group" :class="msg.sender">
+            <div class="message-bubble" :class="{ thinking: msg.sender === 'bot' && msg.id === streamingMessageId }">
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
               <!-- Animated dots for thinking state -->
-              <span
-                v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text"
-                class="thinking-dots"
-              >
+              <span v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text" class="thinking-dots">
                 <span class="dot"></span>
                 <span class="dot"></span>
                 <span class="dot"></span>
@@ -61,19 +37,10 @@
         </div>
 
         <!-- Scroll to Bottom Button -->
-        <button
-          v-show="showScrollButton"
-          @click="scrollToBottom"
-          class="scroll-to-bottom-btn"
-          aria-label="Scroll to bottom"
-        >
+        <button v-show="showScrollButton" @click="scrollToBottom" class="scroll-to-bottom-btn"
+          aria-label="Scroll to bottom">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 14l-7 7m0 0l-7-7m7 7V3"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
           </svg>
         </button>
       </div>
@@ -81,53 +48,26 @@
       <!-- Input -->
       <div class="input-area">
         <div v-if="chatSettings.useRag" class="rag-indicator">
-          <svg
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            style="width: 16px; height: 16px"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-            ></path>
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+            </path>
           </svg>
           Gemini File Search RAG Active
         </div>
         <div class="input-wrapper">
-          <input
-            v-model="currentMessage"
-            @keypress.enter="sendMessage"
-            type="text"
-            class="input-field"
-            placeholder="Message Chat..."
-            :disabled="loading"
-          />
-          <button
-            @click="loading ? stopMessage() : sendMessage()"
-            class="send-btn"
-            :class="{ 'stop-btn': loading }"
-            :disabled="!loading && !currentMessage.trim()"
-          >
+          <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
+            placeholder="Message Chat..." :disabled="loading" />
+          <button @click="loading ? stopMessage() : sendMessage()" class="send-btn" :class="{ 'stop-btn': loading }"
+            :disabled="!loading && !currentMessage.trim()">
             <!-- Stop icon when loading -->
             <svg v-if="loading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              ></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
             <!-- Send icon when not loading -->
             <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              ></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
             </svg>
           </button>
         </div>
@@ -135,18 +75,9 @@
     </div>
 
     <!-- Bootstrap Modal -->
-    <div
-      class="modal fade"
-      id="appModal"
-      tabindex="-1"
-      aria-labelledby="appModalLabel"
-      aria-hidden="true"
-      data-bs-keyboard="false"
-    >
-      <div
-        class="modal-dialog modal-dialog-centered"
-        :class="{ 'modal-lg': modalType === 'documents' }"
-      >
+    <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
+      data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="appModalLabel">{{ modalTitle }}</h5>
@@ -162,14 +93,8 @@
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="login-username" class="form-label">Username</label>
-                  <input
-                    v-model="loginUsername"
-                    type="text"
-                    class="form-control"
-                    id="login-username"
-                    placeholder="Enter your username"
-                    :disabled="formLoading"
-                  />
+                  <input v-model="loginUsername" type="text" class="form-control" id="login-username"
+                    placeholder="Enter your username" :disabled="formLoading" />
                   <div v-if="loginErrors.username" class="invalid-feedback d-block">
                     {{ loginErrors.username }}
                   </div>
@@ -177,53 +102,23 @@
                 <div class="mb-3">
                   <label for="login-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="loginPassword"
-                      :type="showLoginPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="login-password"
-                      placeholder="Enter your password"
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showLoginPassword = !showLoginPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showLoginPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="loginPassword" :type="showLoginPassword ? 'text' : 'password'" class="form-control"
+                      id="login-password" placeholder="Enter your password" :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn" @click="showLoginPassword = !showLoginPassword"
+                      :disabled="formLoading">
+                      <svg v-if="!showLoginPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
                   </div>
@@ -237,21 +132,12 @@
                   </a>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Logging in...' : 'Login' }}
                   </button>
                 </div>
@@ -271,14 +157,8 @@
               <form @submit.prevent="handleRegister">
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
-                  <input
-                    v-model="registerUsername"
-                    type="text"
-                    class="form-control"
-                    id="register-username"
-                    placeholder="Enter your username"
-                    :disabled="formLoading"
-                  />
+                  <input v-model="registerUsername" type="text" class="form-control" id="register-username"
+                    placeholder="Enter your username" :disabled="formLoading" />
                   <div v-if="registerErrors.username" class="invalid-feedback d-block">
                     {{ registerErrors.username }}
                   </div>
@@ -286,53 +166,24 @@
                 <div class="mb-3">
                   <label for="register-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="registerPassword"
-                      :type="showRegisterPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="register-password"
-                      placeholder="Enter your password"
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showRegisterPassword = !showRegisterPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showRegisterPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="registerPassword" :type="showRegisterPassword ? 'text' : 'password'"
+                      class="form-control" id="register-password" placeholder="Enter your password"
+                      :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn"
+                      @click="showRegisterPassword = !showRegisterPassword" :disabled="formLoading">
+                      <svg v-if="!showRegisterPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
                   </div>
@@ -343,53 +194,24 @@
                 <div class="mb-3">
                   <label for="register-confirm" class="form-label">Confirm Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="registerConfirmPassword"
-                      :type="showRegisterConfirmPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="register-confirm"
-                      placeholder="Confirm your password"
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showRegisterConfirmPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="registerConfirmPassword" :type="showRegisterConfirmPassword ? 'text' : 'password'"
+                      class="form-control" id="register-confirm" placeholder="Confirm your password"
+                      :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn"
+                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword" :disabled="formLoading">
+                      <svg v-if="!showRegisterConfirmPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
                   </div>
@@ -398,21 +220,12 @@
                   </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Registering...' : 'Register' }}
                   </button>
                 </div>
@@ -432,14 +245,8 @@
               <form @submit.prevent="handleForgotPassword">
                 <div class="mb-3">
                   <label for="forgot-username" class="form-label">Username (Email)</label>
-                  <input
-                    v-model="forgotPasswordUsername"
-                    type="text"
-                    class="form-control mb-2"
-                    id="forgot-username"
-                    placeholder="Enter your username/email"
-                    :disabled="formLoading"
-                  />
+                  <input v-model="forgotPasswordUsername" type="text" class="form-control mb-2" id="forgot-username"
+                    placeholder="Enter your username/email" :disabled="formLoading" />
                   <div v-if="forgotPasswordErrors.username" class="invalid-feedback d-block">
                     {{ forgotPasswordErrors.username }}
                   </div>
@@ -448,21 +255,12 @@
                   </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Sending...' : 'Send Reset Link' }}
                   </button>
                 </div>
@@ -757,14 +555,12 @@ const sendMessage = async () => {
       payload.anthropic_api_key = chatSettings.value.anthropicApiKey
     }
 
-    // Build headers
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    const res = await fetch('http://localhost:5000/api/v1/chat', {
+    // use /chat/ but not /chat to prevent HTTP & HTTPS mixup errors (Dont know why this is needed) 
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/chat/`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(payload),
       signal: abortController.signal,
       credentials: 'include', // Send cookies for authentication
@@ -899,7 +695,7 @@ const saveCurrentChat = async () => {
     const title =
       firstUserMessage && firstUserMessage.text
         ? firstUserMessage.text.trim().substring(0, 50) +
-          (firstUserMessage.text.length > 50 ? '...' : '')
+        (firstUserMessage.text.length > 50 ? '...' : '')
         : 'New Chat'
 
     const savedChat = await chatApi.saveChatHistory({
@@ -1293,6 +1089,7 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1361,6 +1158,7 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
       0% 0%,
       0% 0%;
   }
+
   100% {
     background-position:
       0% 0%,
@@ -1369,11 +1167,13 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 }
 
 @keyframes thinkingPulse {
+
   0%,
   100% {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transform: scale(1);
   }
+
   50% {
     box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
     transform: scale(1.01);
@@ -1409,12 +1209,14 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 }
 
 @keyframes dotBounce {
+
   0%,
   60%,
   100% {
     opacity: 0.3;
     transform: scale(0.8);
   }
+
   30% {
     opacity: 1;
     transform: scale(1.2);
@@ -1452,6 +1254,7 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 }
 
 @keyframes bounce {
+
   0%,
   60%,
   100% {
@@ -1497,10 +1300,12 @@ const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.85;
   }

@@ -64,7 +64,6 @@ GEMINI_API_KEY=your-gemini-api-key-here
 # Application Settings
 ENVIRONMENT=production
 DEBUG=False
-API_V1_STR=/api/v1
 PROJECT_NAME=RAG Chat Application
 ```
 

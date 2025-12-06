@@ -8,7 +8,7 @@ import { useUserStore } from '@/stores/user'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1', // your API base URL
+  baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000, // request timeout in ms
   withCredentials: true, // Send cookies with requests
 })
