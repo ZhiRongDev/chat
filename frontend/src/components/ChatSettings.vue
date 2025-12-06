@@ -473,7 +473,14 @@ const fetchDocuments = async () => {
       return
     }
 
-    const response = await api.get('/documents')
+    const headers: Record<string, string> = {}
+
+    // Add Gemini API key header if available
+    if (localSettings.value.geminiApiKey) {
+      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
+    }
+
+    const response = await api.get('/documents', Object.keys(headers).length > 0 ? { headers } : undefined)
     documents.value = response.data
   } catch (error: any) {
     console.error('Error fetching documents:', error)
