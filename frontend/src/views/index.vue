@@ -47,13 +47,21 @@
 
       <!-- Input -->
       <div class="input-area">
-        <div v-if="chatSettings.useRag" class="rag-indicator">
+        <div v-if="chatSettings.useRag && !ragWarning" class="rag-indicator">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
             </path>
           </svg>
           Gemini File Search RAG Active
+        </div>
+        <div v-if="ragWarning" class="rag-warning">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+            </path>
+          </svg>
+          RAG enabled but no documents found. Upload documents in Settings.
         </div>
         <div class="input-wrapper">
           <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
@@ -362,6 +370,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 const streamingMessageId = ref<string | null>(null) // Track which message is currently streaming
 const showScrollButton = ref(false) // Show/hide scroll to bottom button
+const ragWarning = ref(false) // Warning when RAG is enabled but no documents found
 let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
 let abortController: AbortController | null = null // Controller to abort ongoing requests
 

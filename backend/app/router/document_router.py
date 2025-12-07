@@ -349,12 +349,19 @@ async def list_documents(
     Returns:
         List of documents from the current API key's store
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
     # Use user-provided API key if available, otherwise use server config
     gemini_service = GeminiFileSearchService(api_key=x_gemini_api_key)
+
+    logger.info(f"list_documents: user_id={current_user.id}, has_api_key_header={bool(x_gemini_api_key)}, api_key_hash={gemini_service.api_key_hash[:8] if gemini_service.api_key_hash else 'None'}")
 
     with Session(app.model.engine) as session:
         # Get the user's store for the current API key
         store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        logger.info(f"  Found/created store: id={store.id}, store_name={store.store_name}, api_key_hash={store.api_key_hash[:8] if store.api_key_hash else 'None'}, is_active={store.is_active}, document_count={store.document_count}")
 
         # List documents from this specific store
         documents = gemini_service.list_documents(
@@ -364,6 +371,8 @@ async def list_documents(
             limit=limit,
             offset=offset
         )
+
+        logger.info(f"  Retrieved {len(documents)} documents from database")
 
         return [
             DocumentListResponse(

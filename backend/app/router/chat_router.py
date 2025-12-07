@@ -257,8 +257,16 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
             with Session(app.model.engine) as session:
                 store = gemini_service.get_or_create_user_store(session, current_user.id)
 
-                # Check if store has any documents
-                if store.document_count == 0:
+                # Check if store has any documents by querying the database directly
+                # (don't rely on cached store.document_count which may be stale)
+                documents = gemini_service.list_documents(
+                    db=session,
+                    user_id=current_user.id,
+                    store_id=store.id,
+                    limit=1
+                )
+
+                if not documents:
                     raise HTTPException(
                         status_code=400,
                         detail="No documents found in your knowledge base. Please upload documents first using the Settings menu.",

@@ -112,11 +112,12 @@ class GeminiFileSearchService:
     ) -> GeminiFileSearchStore:
         """
         Get existing store for user or create new one
-        Each user has exactly ONE store regardless of which API key they use
+        Each user can have multiple stores, one per API key they use.
 
-        IMPORTANT: If a store exists but was created with a different API key,
-        it will be marked inactive and a new store will be created with the current API key.
-        This prevents 403 PERMISSION_DENIED errors when API keys change.
+        IMPORTANT: When switching API keys:
+        - Stores created with different API keys are marked inactive
+        - When switching back to a previous API key, the old store is reactivated
+        - This allows users to switch between API keys without losing documents
 
         Args:
             db: Database session
@@ -128,7 +129,36 @@ class GeminiFileSearchService:
         if not self.api_key_hash:
             raise ValueError("API key hash not available. Cannot get or create store.")
 
-        # Check if user already has a store (regardless of API key)
+        # First, check if there's an inactive store with matching API key hash
+        # This handles the case where user switches back to a previously used API key
+        inactive_statement = select(GeminiFileSearchStore).where(
+            GeminiFileSearchStore.user_id == user_id,
+            GeminiFileSearchStore.api_key_hash == self.api_key_hash,
+            GeminiFileSearchStore.is_active == False
+        )
+        inactive_store = db.exec(inactive_statement).first()
+
+        if inactive_store:
+            logger.info(
+                f"Reactivating inactive store {inactive_store.store_name} for user {user_id} "
+                f"with matching API key hash"
+            )
+            # Deactivate any currently active stores for this user
+            active_statement = select(GeminiFileSearchStore).where(
+                GeminiFileSearchStore.user_id == user_id,
+                GeminiFileSearchStore.is_active == True
+            )
+            active_stores = db.exec(active_statement).all()
+            for active_store in active_stores:
+                active_store.is_active = False
+
+            # Reactivate the store with matching API key
+            inactive_store.is_active = True
+            db.commit()
+            db.refresh(inactive_store)
+            return inactive_store
+
+        # Check if user already has an active store
         statement = select(GeminiFileSearchStore).where(
             GeminiFileSearchStore.user_id == user_id,
             GeminiFileSearchStore.is_active == True
@@ -136,6 +166,9 @@ class GeminiFileSearchService:
         store = db.exec(statement).first()
 
         if store:
+            # Refresh to ensure we have the latest data from database
+            db.refresh(store)
+
             # Verify the store is accessible with the current API key
             # If API key hash doesn't match, this store was created with a different key
             if store.api_key_hash != self.api_key_hash:
