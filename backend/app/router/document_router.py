@@ -92,6 +92,7 @@ class StoreInfoResponse(BaseModel):
     document_count: int
     total_size_bytes: int
     created_at: int
+    api_key_identifier: str  # First 8 chars of API key hash for identification
 
 
 # ============================================================================
@@ -566,4 +567,5 @@ async def get_user_store_info(
             document_count=store.document_count,
             total_size_bytes=store.total_size_bytes,
             created_at=store.created_at,
+            api_key_identifier=store.api_key_hash[:8] if store.api_key_hash else "unknown",
         )

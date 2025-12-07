@@ -71,7 +71,7 @@ class GeminiFileSearchService:
 
         Args:
             db: Database session
-            user_id: Owner user ID (None for global store)
+            user_id: Owner user ID (required - each user has their own store)
             display_name: Human-readable name for the store
             description: Optional description
 
@@ -111,76 +111,61 @@ class GeminiFileSearchService:
         user_id: int
     ) -> GeminiFileSearchStore:
         """
-        Get existing store for user with current API key or create new one
-        Each user can have multiple stores, one per API key they use
+        Get existing store for user or create new one
+        Each user has exactly ONE store regardless of which API key they use
+
+        IMPORTANT: If a store exists but was created with a different API key,
+        it will be marked inactive and a new store will be created with the current API key.
+        This prevents 403 PERMISSION_DENIED errors when API keys change.
 
         Args:
             db: Database session
             user_id: User ID
 
         Returns:
-            GeminiFileSearchStore for the user with current API key
+            GeminiFileSearchStore for the user accessible with current API key
         """
         if not self.api_key_hash:
             raise ValueError("API key hash not available. Cannot get or create store.")
 
-        # Check if user already has a store for this specific API key
+        # Check if user already has a store (regardless of API key)
         statement = select(GeminiFileSearchStore).where(
             GeminiFileSearchStore.user_id == user_id,
-            GeminiFileSearchStore.api_key_hash == self.api_key_hash,
             GeminiFileSearchStore.is_active == True
         )
         store = db.exec(statement).first()
 
         if store:
+            # Verify the store is accessible with the current API key
+            # If API key hash doesn't match, this store was created with a different key
+            if store.api_key_hash != self.api_key_hash:
+                logger.warning(
+                    f"User {user_id} has existing store {store.store_name} created with different API key. "
+                    f"Marking as inactive and creating new store with current API key."
+                )
+                # Mark old store as inactive (we can't access it with current API key anyway)
+                store.is_active = False
+                db.commit()
+
+                # Create new store with current API key
+                return self.create_file_search_store(
+                    db=db,
+                    user_id=user_id,
+                    display_name=f"User {user_id} Document Store",
+                    description=f"Personal document store for user {user_id}"
+                )
+
+            # Store exists and API key matches - return it
             return store
 
-        # Create new store for user with this API key
-        # Use truncated hash in display name for identification
-        key_identifier = self.api_key_hash[:8]
+        # No store exists - create new one
         return self.create_file_search_store(
             db=db,
             user_id=user_id,
-            display_name=f"User {user_id} Store ({key_identifier})",
-            description=f"Personal document store for user {user_id} with API key {key_identifier}"
+            display_name=f"User {user_id} Document Store",
+            description=f"Personal document store for user {user_id}"
         )
 
-    def get_or_create_global_store(
-        self,
-        db: Session
-    ) -> GeminiFileSearchStore:
-        """
-        Get existing global store (for non-authenticated users) with current API key or create new one
-        Each API key gets its own global store
-
-        Args:
-            db: Database session
-
-        Returns:
-            GeminiFileSearchStore global store (user_id = None) for current API key
-        """
-        if not self.api_key_hash:
-            raise ValueError("API key hash not available. Cannot get or create store.")
-
-        # Check if global store already exists for this API key
-        statement = select(GeminiFileSearchStore).where(
-            GeminiFileSearchStore.user_id == None,
-            GeminiFileSearchStore.api_key_hash == self.api_key_hash,
-            GeminiFileSearchStore.is_active == True
-        )
-        store = db.exec(statement).first()
-
-        if store:
-            return store
-
-        # Create new global store for this API key
-        key_identifier = self.api_key_hash[:8]
-        return self.create_file_search_store(
-            db=db,
-            user_id=None,
-            display_name=f"Global Store ({key_identifier})",
-            description=f"Shared document store with API key {key_identifier}"
-        )
 
     def list_stores(self, db: Session, user_id: Optional[int] = None) -> list[GeminiFileSearchStore]:
         """

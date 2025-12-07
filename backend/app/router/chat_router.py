@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Literal, Optional
@@ -10,8 +10,7 @@ from app.model.user_model import User
 from app.model.chat_model import ChatHistory, ChatMessage
 from app.model.document_model import Document
 import app.model
-from app.auth import get_current_user, verify_access_token
-from app.service.user_service import UserService
+from app.auth import get_current_user, get_current_user_optional
 from sqlmodel import Session, select
 import asyncio
 import logging
@@ -69,7 +68,7 @@ async def get_chat_status():
 @nonauth_router.post("/")
 async def chat_stream(
     payload: ChatPayload,
-    authorization: Optional[str] = Header(None)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """
     Chat endpoint with optional authentication
@@ -78,14 +77,14 @@ async def chat_stream(
     - Multiple LLM providers (Gemini, OpenAI, Anthropic)
     - LangGraph-based reasoning workflow
     - Gemini File Search RAG mode (when use_rag=True)
-      - Uses personal document store if authenticated
-      - Uses global document store if not authenticated
+      - Requires authentication
+      - Each user has their own personal document store (one store per user_id)
     - Optional Google Search integration via Serper or Tavily
     - Streaming responses
 
     Args:
         payload: Chat payload with message and optional configuration
-        authorization: Optional Authorization header (for personal RAG store)
+        current_user: Current user from session cookie (None if not authenticated)
 
     Returns:
         StreamingResponse with text/plain content
@@ -93,21 +92,6 @@ async def chat_stream(
     Raises:
         HTTPException: If message is missing or provider is not available
     """
-    # Try to get user from Authorization header if present
-    current_user = None
-    if authorization and authorization.startswith("Bearer "):
-        try:
-            token = authorization.replace("Bearer ", "")
-            token_data = verify_access_token(token)  # Returns dict with 'sub', 'reset', 'exp'
-            username = token_data.get("sub") if isinstance(token_data, dict) else None
-            if username:
-                user_service = UserService()
-                current_user = user_service.get_user_by_username(username)
-        except Exception as e:
-            # If token is invalid, just treat as non-authenticated
-            logger.debug(f"Failed to authenticate user from token: {str(e)}")
-            pass
-
     return await _chat_stream_internal(payload, current_user=current_user)
 
 
@@ -262,24 +246,22 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
             # Initialize Gemini service with user-provided API key (if available)
             gemini_service = GeminiFileSearchService(api_key=payload.gemini_api_key)
 
-            # Get File Search Store (user's store if authenticated, global store if not)
+            # RAG requires authentication - each user has their own document store
+            if not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="RAG mode requires authentication. Please log in to use document-based responses.",
+                )
+
+            # Get user's personal File Search Store
             with Session(app.model.engine) as session:
-                if current_user:
-                    # Use user's personal store
-                    store = gemini_service.get_or_create_user_store(session, current_user.id)
-                else:
-                    # Use global store for non-authenticated users
-                    store = gemini_service.get_or_create_global_store(session)
+                store = gemini_service.get_or_create_user_store(session, current_user.id)
 
                 # Check if store has any documents
                 if store.document_count == 0:
-                    if current_user:
-                        detail_msg = "No documents found in your knowledge base. Please upload documents first using the Settings menu."
-                    else:
-                        detail_msg = "RAG mode is enabled but no documents are available in the shared knowledge base. Please log in to upload documents or disable RAG mode to continue."
                     raise HTTPException(
                         status_code=400,
-                        detail=detail_msg,
+                        detail="No documents found in your knowledge base. Please upload documents first using the Settings menu.",
                     )
 
                 # Use the model from settings if not provided
