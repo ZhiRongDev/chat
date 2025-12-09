@@ -400,25 +400,45 @@ class GeminiFileSearchService:
         """
         Delete a document from database and optionally from Gemini
 
+        This method ensures consistency by:
+        1. Deleting from Gemini first
+        2. Only deleting from database if Gemini delete succeeds (or if delete_from_gemini=False)
+        3. Relying on auto-sync to recover if database operation fails
+
         Args:
             db: Database session
             document_id: Document database ID
-            delete_from_gemini: If True, also delete from Gemini API
+            delete_from_gemini: If True, also delete from Gemini API (default: True)
 
         Returns:
             True if successful
+
+        Raises:
+            RuntimeError: If Gemini deletion fails (to prevent database deletion)
         """
         document = db.get(Document, document_id)
         if not document:
             return False
 
-        # Delete from Gemini API if requested
+        # Delete from Gemini API first (if requested)
         if delete_from_gemini and document.gemini_file_id:
             try:
                 self._ensure_client()
-                self.client.files.delete(name=document.gemini_file_id)
+                # Use file_search_stores.documents.delete for documents in a store
+                # The document ID format is: fileSearchStores/{store_id}/documents/{doc_id}
+                # Use force=True to delete document and all related chunks
+                from google.genai.types import DeleteDocumentConfig
+                self.client.file_search_stores.documents.delete(
+                    name=document.gemini_file_id,
+                    config=DeleteDocumentConfig(force=True)
+                )
+                logger.info(f"Successfully deleted document {document.gemini_file_id} from Gemini File Search Store")
             except Exception as e:
-                logger.error(f"Error deleting from Gemini: {e}")
+                error_msg = f"Failed to delete document from Gemini: {e}"
+                logger.error(error_msg)
+                # Raise exception to prevent database deletion
+                # This maintains consistency - if we can't delete from Gemini, don't delete from DB
+                raise RuntimeError(error_msg)
 
         # Update store statistics
         if document.gemini_store_id:
@@ -431,10 +451,11 @@ class GeminiFileSearchService:
                 store.total_size_bytes = max(0, store.total_size_bytes - document.file_size)
                 store.updated_at = get_timestamp()
 
-        # Delete from database
+        # Delete from database (only reached if Gemini delete succeeded or wasn't requested)
         db.delete(document)
         db.commit()
 
+        logger.info(f"Successfully deleted document {document_id} from database")
         return True
 
     def list_documents(

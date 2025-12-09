@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from app.router import user_router, chat_router, document_router
 from app.service.user_service import UserService
-from app.auth import create_access_token, CreateAccessTokenPayload, get_current_user
+from app.auth import create_access_token, CreateAccessTokenPayload
 from pydantic import BaseModel
 from app.config import settings
 
@@ -25,11 +25,7 @@ class Token(BaseModel):
 @router.get("/health")
 async def health_check():
     """Health check endpoint for monitoring and load balancers"""
-    return {
-        "status": "healthy",
-        "service": "chat-backend",
-        "version": "1.0.0"
-    }
+    return {"status": "healthy", "service": "chat-backend", "version": "1.0.0"}
 
 
 @router.post("/token")
