@@ -406,12 +406,6 @@ TORCH_DEVICE=cpu          # Force CPU execution
 2. **.env.template** ([backend/.env.template](backend/.env.template:5-7)): For local development
 3. **docker-compose.dev.yml** ([docker-compose.dev.yml](docker-compose.dev.yml:35-37)): Runtime override
 
-#### Libraries Using CPU
-
-- **FAISS**: Using `faiss-cpu` package (not `faiss-gpu`)
-- **Sentence Transformers**: Will use CPU due to `TORCH_DEVICE=cpu`
-- **ChromaDB**: CPU-only by default
-
 ### Working with the Database
 
 This project uses external managed PostgreSQL databases (Zeabur, AWS RDS, Supabase, etc.).

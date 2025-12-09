@@ -90,3 +90,29 @@ async def get_current_user(sessionId: Optional[str] = Cookie(None)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid session",
         )
+
+
+async def get_current_user_optional(sessionId: Optional[str] = Cookie(None)):
+    """
+    Get current user from session cookie, but return None if not authenticated.
+    Used for endpoints that support both authenticated and non-authenticated access.
+
+    Args:
+        sessionId: JWT token from httpOnly cookie
+
+    Returns:
+        User object if authenticated, None otherwise
+    """
+    if not sessionId:
+        return None
+
+    try:
+        token_data = verify_access_token(sessionId)
+        username = token_data.get("sub")
+        if not username:
+            return None
+        user_service = UserService()
+        user = user_service.get_user_by_username(username)
+        return user
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None

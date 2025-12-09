@@ -129,6 +129,14 @@
         </button>
       </div>
 
+      <!-- API Key Binding Notice -->
+      <div class="info-banner">
+        <i class="bi bi-info-circle"></i>
+        <div class="info-content">
+          <span>Your documents are stored in a Gemini File Search store that is bound to your current API key. If you switch to a different Gemini API key, you'll access a different document store. Switching back to a previous API key will restore access to that key's documents.</span>
+        </div>
+      </div>
+
       <!-- Document List -->
       <div v-if="documents.length > 0" class="document-list">
         <div v-for="doc in documents" :key="doc.id" class="document-item">
@@ -256,7 +264,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, nextTick } from 'vue'
 import { appendAlert } from '@/utils/alert'
 import { useUserStore } from '@/stores/user'
 import api from '@/api/service'
@@ -291,12 +299,14 @@ watch(
   { deep: true },
 )
 
-const saveSettings = () => {
+const saveSettings = async () => {
   emit('update:modelValue', { ...localSettings.value })
   // Save to localStorage for persistence
   localStorage.setItem('chatSettings', JSON.stringify(localSettings.value))
   // Show success alert
   appendAlert('Settings saved successfully!', 'success')
+  // Refresh documents to reflect any API key changes
+  await fetchDocuments()
 }
 
 const resetSettings = () => {
@@ -351,6 +361,16 @@ watch(isLoggedIn, (newValue) => {
     // User logged out while RAG was enabled, disable it
     localSettings.value.useRag = false
     saveSettings()
+  } else if (newValue) {
+    // User logged in, fetch documents
+    fetchDocuments()
+  }
+})
+
+// Watch for Gemini API key changes and refresh documents
+watch(() => localSettings.value.geminiApiKey, () => {
+  if (isLoggedIn.value) {
+    fetchDocuments()
   }
 })
 
@@ -464,10 +484,12 @@ const uploadText = async () => {
 
 // Document management functions
 const fetchDocuments = async () => {
+  console.log('fetchDocuments called, isLoggedIn:', isLoggedIn.value, 'hasGeminiKey:', !!localSettings.value.geminiApiKey)
   loadingDocuments.value = true
   try {
     // If not logged in, just set empty array and return
     if (!isLoggedIn.value) {
+      console.log('Not logged in, skipping document fetch')
       documents.value = []
       loadingDocuments.value = false
       return
@@ -478,9 +500,14 @@ const fetchDocuments = async () => {
     // Add Gemini API key header if available
     if (localSettings.value.geminiApiKey) {
       headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
+      console.log('Added Gemini API key to headers')
+    } else {
+      console.warn('No Gemini API key available for document fetch')
     }
 
+    console.log('Fetching documents from /documents/ with headers:', Object.keys(headers))
     const response = await api.get('/documents/', Object.keys(headers).length > 0 ? { headers } : undefined)
+    console.log('Documents fetched successfully, count:', response.data.length)
     documents.value = response.data
   } catch (error: any) {
     console.error('Error fetching documents:', error)
@@ -601,10 +628,16 @@ const formatDate = (timestamp: number): string => {
 
 // Load settings from localStorage on mount
 const loadSettings = () => {
+  console.log('loadSettings called')
   const saved = localStorage.getItem('chatSettings')
   if (saved) {
     try {
       const parsed = JSON.parse(saved)
+      console.log('Parsed settings from localStorage:', {
+        hasGeminiKey: !!parsed.geminiApiKey,
+        provider: parsed.provider,
+        useRag: parsed.useRag
+      })
       // Migrate old settings: remove topK and minScore, add maxOutputTokens
       if ('topK' in parsed || 'minScore' in parsed) {
         delete parsed.topK
@@ -615,15 +648,27 @@ const loadSettings = () => {
       }
       localSettings.value = { ...localSettings.value, ...parsed }
       emit('update:modelValue', localSettings.value)
+      console.log('Settings loaded and applied to localSettings')
     } catch (e) {
       console.error('Failed to load settings:', e)
     }
+  } else {
+    console.warn('No saved settings found in localStorage')
   }
 }
 
+// Load settings FIRST, then fetch documents (so API key is available)
+console.log('Component mount: loading settings and fetching documents')
 loadSettings()
-// Load documents on mount
-fetchDocuments()
+
+// Load documents on mount - must be AFTER loadSettings() so API key is available
+// Use nextTick to ensure settings are fully applied before fetching
+nextTick(() => {
+  console.log('nextTick: checking if should fetch documents, isLoggedIn:', isLoggedIn.value)
+  if (isLoggedIn.value) {
+    fetchDocuments()
+  }
+})
 </script>
 
 <style scoped>
@@ -702,6 +747,42 @@ fetchDocuments()
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* Info Banner */
+.info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+}
+
+.info-banner i {
+  font-size: 1.25rem;
+  color: #1976d2;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.info-content strong {
+  color: #1565c0;
+  font-weight: 600;
+}
+
+.info-content span {
+  color: #1976d2;
 }
 
 /* Section Header with Refresh Button */

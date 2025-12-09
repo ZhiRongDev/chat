@@ -27,7 +27,6 @@ This is a **RAG (Retrieval-Augmented Generation) chat application** that combine
 - **Infrastructure**: Docker Compose, Nginx (production), Gunicorn
 - **AI/ML**:
   - LLMs: Gemini API, OpenAI, Anthropic (via Langchain)
-  - RAG: FAISS, ChromaDB (vector stores)
   - Embeddings: OpenAI Embeddings, Google Embeddings
   - Frameworks: Langchain, Langgraph
 
@@ -123,7 +122,6 @@ docker-compose logs -f frontend
   - `chat_model.py`: Chat history and messages
   - `document_model.py`: Document metadata, chunks, and vector store config
 - **Database**: External managed PostgreSQL (Zeabur, AWS RDS, Supabase, etc.)
-- **Vector Store**: FAISS/ChromaDB for document embeddings (stored in `data/vector_stores/`)
 
 ### Authentication & Authorization
 
@@ -165,7 +163,6 @@ docker-compose logs -f frontend
 - **LLM Service** (`llm/`): Multi-provider LLM support (Gemini, OpenAI, Anthropic)
 - **RAG Service** (`rag/`): Complete RAG pipeline implementation
   - `embedding_service.py`: Text embedding generation
-  - `vector_store.py`: FAISS/ChromaDB management
   - `query_processor.py`: Query preprocessing
   - `retrieval_service.py`: Semantic document retrieval
   - `prompt_builder.py`: Context-aware prompt construction
@@ -341,13 +338,3 @@ GEMINI_MAX_FILE_SIZE_MB=100                     # Max file size for upload
 - **Built-in Citations**: Responses include grounding metadata
 - **Cost-Effective**: Only pay for indexing ($0.15/1M tokens), storage is free
 - **Persistent Storage**: Documents remain until explicitly deleted
-
-### Migration from Old RAG System
-
-The old FAISS/ChromaDB-based RAG system has been replaced with Gemini File Search. Key changes:
-
-- ❌ Removed: `embedding_service`, `vector_store`, `query_processor`, `retrieval_service`, `rag_pipeline`
-- ❌ Removed: FAISS, ChromaDB, tiktoken, sentence-transformers dependencies
-- ✅ Added: `gemini_file_search_service` with simplified API
-- ✅ Added: `GeminiFileSearchStore` model for per-user stores
-- ⚠️ **Breaking**: RAG now requires authentication and Gemini provider

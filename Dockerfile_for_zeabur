@@ -1,0 +1,77 @@
+# ============================================
+# Multi-stage Dockerfile for Zeabur Deployment
+# Combines Frontend (Vue + Nginx) + Backend (FastAPI)
+# ============================================
+
+# ---- Frontend Build Stage ----
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /app/frontend
+
+# Copy package files and install dependencies
+COPY ./frontend/package*.json ./
+RUN npm ci
+
+# Copy source code and build
+COPY ./frontend ./
+RUN npm run build
+
+# ---- Backend Base Stage ----
+FROM python:3.13-slim AS backend-base
+
+# Prevent Python from buffering stdout/stderr
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# Install system dependencies for psycopg2 and other native extensions
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    build-essential \
+    curl \
+    nginx \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy backend requirements and install Python dependencies
+COPY ./backend/requirements.txt ./backend/
+RUN pip install --no-cache-dir -r ./backend/requirements.txt
+
+# ---- Production Stage ----
+FROM backend-base AS production
+
+WORKDIR /app
+
+# Copy backend application
+COPY ./backend ./backend
+
+# Copy frontend build from frontend-build stage
+COPY --from=frontend-build /app/frontend/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY ./docker/nginx/zeabur.conf /etc/nginx/sites-available/default
+
+# Remove default nginx config and update nginx.conf to use port 8080
+RUN rm -f /etc/nginx/sites-enabled/default && \
+    ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default && \
+    sed -i 's/listen 80/listen 8080/g' /etc/nginx/nginx.conf || true
+
+# Copy and set up startup script
+COPY ./scripts/start-zeabur.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Expose port 8080 for HTTP (Zeabur requirement)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8080/health && curl -f http://localhost:5000/api/v1/health || exit 1
+
+# Set working directory to backend for the application
+WORKDIR /app/backend
+
+# Start both nginx and backend
+CMD ["/app/start.sh"]

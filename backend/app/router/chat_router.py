@@ -7,11 +7,9 @@ from app.service.llm import ChatAgentGraph, LLMFactory, SearchTools
 from app.service.chat_service import ChatService
 from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
-from app.model.chat_model import ChatHistory, ChatMessage
 from app.model.document_model import Document
 import app.model
-from app.auth import get_current_user, verify_access_token
-from app.service.user_service import UserService
+from app.auth import get_current_user, get_current_user_optional
 from sqlmodel import Session, select
 import asyncio
 import logging
@@ -69,7 +67,8 @@ async def get_chat_status():
 @nonauth_router.post("/")
 async def chat_stream(
     payload: ChatPayload,
-    authorization: Optional[str] = Header(None)
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    x_gemini_api_key: Optional[str] = Header(None),
 ):
     """
     Chat endpoint with optional authentication
@@ -78,14 +77,15 @@ async def chat_stream(
     - Multiple LLM providers (Gemini, OpenAI, Anthropic)
     - LangGraph-based reasoning workflow
     - Gemini File Search RAG mode (when use_rag=True)
-      - Uses personal document store if authenticated
-      - Uses global document store if not authenticated
+      - Requires authentication
+      - Each user has their own personal document store (one store per user_id)
     - Optional Google Search integration via Serper or Tavily
     - Streaming responses
 
     Args:
         payload: Chat payload with message and optional configuration
-        authorization: Optional Authorization header (for personal RAG store)
+        current_user: Current user from session cookie (None if not authenticated)
+        x_gemini_api_key: Optional Gemini API key via header (overrides payload.gemini_api_key)
 
     Returns:
         StreamingResponse with text/plain content
@@ -93,20 +93,9 @@ async def chat_stream(
     Raises:
         HTTPException: If message is missing or provider is not available
     """
-    # Try to get user from Authorization header if present
-    current_user = None
-    if authorization and authorization.startswith("Bearer "):
-        try:
-            token = authorization.replace("Bearer ", "")
-            token_data = verify_access_token(token)  # Returns dict with 'sub', 'reset', 'exp'
-            username = token_data.get("sub") if isinstance(token_data, dict) else None
-            if username:
-                user_service = UserService()
-                current_user = user_service.get_user_by_username(username)
-        except Exception as e:
-            # If token is invalid, just treat as non-authenticated
-            logger.debug(f"Failed to authenticate user from token: {str(e)}")
-            pass
+    # Header takes precedence over body for API key
+    if x_gemini_api_key:
+        payload.gemini_api_key = x_gemini_api_key
 
     return await _chat_stream_internal(payload, current_user=current_user)
 
@@ -130,19 +119,19 @@ def _extract_document_references(grounding_metadata, session: Session) -> list[d
 
     try:
         # Extract grounding chunks which contain document references
-        if hasattr(grounding_metadata, 'grounding_chunks'):
+        if hasattr(grounding_metadata, "grounding_chunks"):
             for chunk in grounding_metadata.grounding_chunks:
                 # Check if this is a retrieved context (from file search)
-                if hasattr(chunk, 'retrieved_context'):
+                if hasattr(chunk, "retrieved_context"):
                     retrieved = chunk.retrieved_context
 
                     # Extract URI which contains the file ID
-                    if hasattr(retrieved, 'uri'):
+                    if hasattr(retrieved, "uri"):
                         uri = retrieved.uri
                         # URI format: "fileSearchStores/{store_id}/documents/{file_id}"
                         # Extract the file_id from URI
-                        if '/documents/' in uri:
-                            file_id_part = uri.split('/documents/')[-1]
+                        if "/documents/" in uri:
+                            file_id_part = uri.split("/documents/")[-1]
 
                             # Skip if we've already processed this file
                             if file_id_part in seen_file_ids:
@@ -157,26 +146,36 @@ def _extract_document_references(grounding_metadata, session: Session) -> list[d
                             doc = session.exec(stmt).first()
 
                             if doc:
-                                document_refs.append({
-                                    'filename': doc.filename,
-                                    'file_type': doc.file_type,
-                                    'file_size': doc.file_size,
-                                })
+                                document_refs.append(
+                                    {
+                                        "filename": doc.filename,
+                                        "file_type": doc.file_type,
+                                        "file_size": doc.file_size,
+                                    }
+                                )
                             else:
                                 # Fallback: Use title from retrieved context if available
-                                title = retrieved.title if hasattr(retrieved, 'title') else 'Unknown Document'
-                                document_refs.append({
-                                    'filename': title,
-                                    'file_type': 'unknown',
-                                    'file_size': 0,
-                                })
+                                title = (
+                                    retrieved.title
+                                    if hasattr(retrieved, "title")
+                                    else "Unknown Document"
+                                )
+                                document_refs.append(
+                                    {
+                                        "filename": title,
+                                        "file_type": "unknown",
+                                        "file_size": 0,
+                                    }
+                                )
     except Exception as e:
         logger.error(f"Error extracting document references: {e}")
 
     return document_refs
 
 
-async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[User] = None):
+async def _chat_stream_internal(
+    payload: ChatPayload, current_user: Optional[User] = None
+):
     """
     Internal chat stream handler used by both authenticated and non-authenticated endpoints
 
@@ -262,24 +261,33 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
             # Initialize Gemini service with user-provided API key (if available)
             gemini_service = GeminiFileSearchService(api_key=payload.gemini_api_key)
 
-            # Get File Search Store (user's store if authenticated, global store if not)
-            with Session(app.model.engine) as session:
-                if current_user:
-                    # Use user's personal store
-                    store = gemini_service.get_or_create_user_store(session, current_user.id)
-                else:
-                    # Use global store for non-authenticated users
-                    store = gemini_service.get_or_create_global_store(session)
+            # RAG requires authentication - each user has their own document store
+            if not current_user:
+                raise HTTPException(
+                    status_code=401,
+                    detail="RAG mode requires authentication. Please log in to use document-based responses.",
+                )
 
-                # Check if store has any documents
-                if store.document_count == 0:
-                    if current_user:
-                        detail_msg = "No documents found in your knowledge base. Please upload documents first using the Settings menu."
-                    else:
-                        detail_msg = "RAG mode is enabled but no documents are available in the shared knowledge base. Please log in to upload documents or disable RAG mode to continue."
+            # Get user's personal File Search Store
+            with Session(app.model.engine) as session:
+                store = gemini_service.get_or_create_user_store(
+                    session, current_user.id
+                )
+
+                print(f"store: {store}")
+
+                # Check if store has any documents by querying the database directly
+                # (don't rely on cached store.document_count which may be stale)
+                documents = gemini_service.list_documents(
+                    db=session, user_id=current_user.id, store_id=store.id, limit=1
+                )
+
+                print(f"documents: {documents}")
+
+                if not documents:
                     raise HTTPException(
                         status_code=400,
-                        detail=detail_msg,
+                        detail="No documents found in your knowledge base. Please upload documents first using the Settings menu.",
                     )
 
                 # Use the model from settings if not provided
@@ -294,34 +302,37 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
                             store_name=store.store_name,
                             model=rag_model,
                             temperature=payload.temperature,
-                            max_output_tokens=payload.max_output_tokens
+                            max_output_tokens=payload.max_output_tokens,
                         )
 
                         # Stream the content back
-                        content = result['content']
+                        content = result["content"]
 
                         # Stream character by character for smooth UX
                         for char in content:
-                            await asyncio.sleep(0.01)  # Small delay for streaming effect
+                            await asyncio.sleep(
+                                0.01
+                            )  # Small delay for streaming effect
                             yield char.encode("utf-8")
 
                         # Extract and format document references if available
-                        if result.get('grounding_metadata'):
+                        if result.get("grounding_metadata"):
                             # Extract document references from grounding metadata
                             document_refs = _extract_document_references(
-                                result['grounding_metadata'],
-                                session
+                                result["grounding_metadata"], session
                             )
 
                             if document_refs:
                                 # Format document references
-                                citations_msg = "\n\n---\n\n**📚 Referenced Documents:**\n\n"
+                                citations_msg = (
+                                    "\n\n---\n\n**📚 Referenced Documents:**\n\n"
+                                )
                                 for idx, doc_ref in enumerate(document_refs, 1):
-                                    filename = doc_ref['filename']
-                                    file_type = doc_ref['file_type'].upper()
+                                    filename = doc_ref["filename"]
+                                    file_type = doc_ref["file_type"].upper()
 
                                     # Format file size
-                                    file_size = doc_ref['file_size']
+                                    file_size = doc_ref["file_size"]
                                     if file_size < 1024:
                                         size_str = f"{file_size} B"
                                     elif file_size < 1024 * 1024:
@@ -333,7 +344,9 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
 
                                 # Stream the formatted citations
                                 for char in citations_msg:
-                                    await asyncio.sleep(0.005)  # Faster streaming for citations
+                                    await asyncio.sleep(
+                                        0.005
+                                    )  # Faster streaming for citations
                                     yield char.encode("utf-8")
                             else:
                                 # Generic fallback if we can't extract specific documents
@@ -378,9 +391,7 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         # Handle unexpected errors
-        raise HTTPException(
-            status_code=500, detail=f"Internal server error: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 # ============================================================================
@@ -390,6 +401,7 @@ async def _chat_stream_internal(payload: ChatPayload, current_user: Optional[Use
 
 class MessageData(BaseModel):
     """Message data for saving/receiving chat messages"""
+
     id: Optional[str] = None  # Frontend sends/receives str, backend uses int internally
     sender: str
     text: str
@@ -397,6 +409,7 @@ class MessageData(BaseModel):
 
 class SaveChatPayload(BaseModel):
     """Payload for saving/updating chat history"""
+
     chat_id: Optional[str] = None  # Frontend sends str, backend converts to int
     title: str
     messages: list[MessageData]
@@ -404,6 +417,7 @@ class SaveChatPayload(BaseModel):
 
 class ChatHistoryResponse(BaseModel):
     """Response model for chat history - returns str IDs to frontend"""
+
     id: str  # Snowflake ID as string for JavaScript safety
     title: str
     created_at: int
@@ -413,6 +427,7 @@ class ChatHistoryResponse(BaseModel):
 
 class ChatDetailResponse(BaseModel):
     """Response model for chat detail with messages - returns str IDs to frontend"""
+
     id: str  # Snowflake ID as string for JavaScript safety
     title: str
     created_at: int
@@ -536,8 +551,7 @@ async def save_chat_history(
 
         # Convert MessageData to dict for service (message IDs are ignored when saving)
         messages_data = [
-            {"sender": msg.sender, "text": msg.text}
-            for msg in payload.messages
+            {"sender": msg.sender, "text": msg.text} for msg in payload.messages
         ]
 
         chat = chat_service.save_chat_with_messages(
