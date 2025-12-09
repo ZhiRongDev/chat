@@ -39,6 +39,7 @@ yarn-error.log*
 # Docker
 docker-compose*.yml
 docker/
+!docker/nginx/zeabur.conf
 .dockerignore
 
 # Frontend Development
@@ -70,3 +71,4 @@ coverage/
 
 # Scripts
 scripts/
+!scripts/start-zeabur.sh
