@@ -3,13 +3,8 @@ from app.config import settings
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status, Cookie
-from fastapi.security import OAuth2PasswordBearer
 from app.service.user_service import UserService
 from typing import Optional
-
-
-# This will check the response of '/api/v1/token'
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token", auto_error=False)
 
 
 class CreateAccessTokenPayload(BaseModel):
