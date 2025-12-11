@@ -15,7 +15,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
 ### Authentication & Security
 
 - **User Authentication**: JWT-based authentication with bcrypt password hashing
-- **Email Verification**: Required email verification for new user accounts via Gmail API
+- **Email Verification**: Required email verification for new user accounts via Gmail SMTP
 - **Password Reset**: Secure password reset flow with email-based JWT tokens
 - **Optional Authentication**: Chat endpoint works with or without authentication
 
@@ -42,7 +42,7 @@ A full-stack **Retrieval-Augmented Generation (RAG)** chat application that comb
   - Agent Framework: LangGraph for multi-step reasoning
   - RAG: Gemini File Search API
   - Search Tools: Serper (Google Search), Tavily Search
-- **Email**: Gmail API for verification and password reset
+- **Email**: Gmail SMTP for verification and password reset
 - **Migrations**: Alembic for database schema management
 - **Testing**: pytest with coverage
 
@@ -88,7 +88,7 @@ cd chat
 
 ```bash
 # Copy the environment template
-cp backend/.env.template .env
+cp .env.template .env
 
 # Edit .env with your configuration
 nano .env  # or use your preferred editor
@@ -113,10 +113,9 @@ ANTHROPIC_API_KEY=your-anthropic-api-key-here  # Optional
 SERPER_API_KEY=your-serper-api-key-here  # Optional: Google Search via Serper
 TAVILY_API_KEY=your-tavily-api-key-here  # Optional: Tavily Search
 
-# Gmail API (for email verification and password reset)
-GMAIL_CREDENTIALS_PATH=app/service/gmail/credentials.json
-GMAIL_TOKEN_PATH=app/service/gmail/token.json
-SENDER_EMAIL=your-email@gmail.com
+# Gmail SMTP (for email verification and password reset)
+FROM_EMAIL=your-email@gmail.com           # Gmail address to send emails from
+GMAIL_APP_PASSWORD=your-app-password-here # Gmail App Password (generate at https://myaccount.google.com/apppasswords)
 
 # Other settings can use defaults from template
 ```
@@ -403,7 +402,7 @@ TORCH_DEVICE=cpu          # Force CPU execution
 #### Where It's Configured
 
 1. **Dockerfile** ([docker/backend/Dockerfile](docker/backend/Dockerfile:10-11)): Set at build time
-2. **.env.template** ([backend/.env.template](backend/.env.template:5-7)): For local development
+2. **.env.template** ([.env.template](.env.template:5-7)): For local development
 3. **docker-compose.dev.yml** ([docker-compose.dev.yml](docker-compose.dev.yml:35-37)): Runtime override
 
 ### Working with the Database
@@ -722,22 +721,22 @@ sudo sysctl -p
 
 New users must verify their email address before they can access the application.
 
-#### Setup Gmail API
+#### Setup Gmail SMTP
 
-1. **Create Google Cloud Project** and enable Gmail API
-2. **Create OAuth 2.0 credentials** (Desktop app type)
-3. **Download credentials** and save as `backend/app/service/gmail/credentials.json`
-4. **Configure environment**:
+1. **Enable 2-Factor Authentication** on your Google account at https://myaccount.google.com/security
+2. **Generate App Password**:
+   - Go to https://myaccount.google.com/apppasswords
+   - Select "Mail" and your device
+   - Copy the 16-character password
+3. **Configure environment**:
 
 ```bash
 # .env
-GMAIL_CREDENTIALS_PATH=app/service/gmail/credentials.json
-GMAIL_TOKEN_PATH=app/service/gmail/token.json
-SENDER_EMAIL=your-email@gmail.com
+FROM_EMAIL=your-email@gmail.com           # Your Gmail address
+GMAIL_APP_PASSWORD=your-app-password-here # The 16-character App Password (without spaces)
 ```
 
-5. **First-time authorization**: Run the backend, it will open a browser for Gmail authorization
-6. **Token saved**: `token.json` will be created and used for subsequent emails
+4. **Test email sending**: Register a new user to verify email delivery
 
 #### Email Verification Flow
 
@@ -870,7 +869,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 - [ ] Change `SECRET_KEY` in `.env` to a strong random value (use `openssl rand -hex 32`)
 - [ ] Set proper `FRONTEND_HOST` for CORS configuration
-- [ ] Configure Gmail API credentials for email verification/password reset
+- [ ] Configure Gmail SMTP (App Password) for email verification/password reset
 - [ ] Set up firewall rules and security groups
 - [ ] Enable HTTPS with reverse proxy (nginx/traefik/Caddy)
 - [ ] Configure database backups with `scripts/db-backup.sh`

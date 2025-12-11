@@ -1,7 +1,3 @@
-# Gmail Email API
-token.json
-credentials.json
-
 .env
 .env.backup
 

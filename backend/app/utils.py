@@ -2,15 +2,10 @@ from app.config import settings
 from datetime import datetime, timezone
 import logging
 
-### Gmail email API
-import os
-import base64
-from email.message import EmailMessage
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+### Gmail SMTP
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 logger = logging.getLogger(__name__)
 
@@ -32,147 +27,125 @@ def get_timestamp():
     return int(datetime.now(timezone.utc).timestamp())
 
 
-def get_gmail_credentials():
-    """Load or refresh OAuth2 credentials from token.json"""
-    creds = None
-    if os.path.exists(settings.TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(
-            settings.TOKEN_FILE, settings.SCOPES
-        )
+def send_email_via_smtp(to_email: str, subject: str, html_content: str, plain_text: str):
+    """Send an email using Gmail SMTP server with TLS
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                settings.CREDENTIALS_FILE, settings.SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-        with open(settings.TOKEN_FILE, "w") as token:
-            token.write(creds.to_json())
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    if not settings.FROM_EMAIL:
+        logger.warning("FROM_EMAIL not configured. Skipping email.")
+        return False
 
-    return creds
+    if not settings.GMAIL_APP_PASSWORD:
+        logger.warning("GMAIL_APP_PASSWORD not configured. Skipping email.")
+        return False
+
+    try:
+        # Create message
+        message = MIMEMultipart("alternative")
+        message["Subject"] = subject
+        message["From"] = settings.FROM_EMAIL
+        message["To"] = to_email
+
+        # Attach both plain text and HTML versions
+        part1 = MIMEText(plain_text, "plain")
+        part2 = MIMEText(html_content, "html")
+        message.attach(part1)
+        message.attach(part2)
+
+        # Connect to Gmail SMTP server using TLS (port 587)
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()  # Upgrade to secure TLS connection
+        server.login(settings.FROM_EMAIL, settings.GMAIL_APP_PASSWORD)
+        server.sendmail(settings.FROM_EMAIL, to_email, message.as_string())
+        server.quit()
+
+        logger.info(f"Email sent successfully to {to_email}")
+        return True
+
+    except Exception as error:
+        logger.error(f"Error sending email: {error}")
+        return False
 
 
 def send_reset_email(to_email: str, subject: str, reset_link: str):
-    """Send an email with HTML content via Gmail API using OAuth2
+    """Send a password reset email via Gmail SMTP
 
     Returns:
-        dict or None: Email send result if successful, None if email not configured or failed
+        bool: True if successful, False otherwise
     """
-    if not settings.FROM_EMAIL:
-        logger.warning("FROM_EMAIL not configured. Skipping password reset email.")
-        return None
-
-    try:
-        creds = get_gmail_credentials()
-    except Exception as e:
-        logger.error(f"Failed to get Gmail credentials: {e}")
-        return None
-
-    try:
-        service = build("gmail", "v1", credentials=creds)
-
-        # Create message with both text and HTML versions
-        message = EmailMessage()
-        plain_text = f"Reset your password: {reset_link}"
-        html_content = f"""
-        <html>
-            <body>
-                <p>點選以下連結來重置你的密碼, 請在 {settings.RESET_TOKEN_EXPIRE_MINUTES} 分鐘內完成</p>
-                <p>
-                    <a href="{reset_link}" style="
-                        padding: 10px 20px;
-                        background-color: #007BFF;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 4px;
-                        display: inline-block;
-                    ">重製密碼</a>
-                </p>
-            </body>
-        </html>
-        """
-
-        message.set_content(plain_text)
-        message.add_alternative(html_content, subtype="html")
-
-        message["To"] = to_email
-        message["From"] = settings.FROM_EMAIL
-        message["Subject"] = subject
-
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        create_message = {"raw": encoded_message}
-
-        send_result = (
-            service.users().messages().send(userId="me", body=create_message).execute()
+    if not settings.FROM_EMAIL or not settings.GMAIL_APP_PASSWORD:
+        logger.warning(
+            f"Email configuration incomplete. FROM_EMAIL: {'set' if settings.FROM_EMAIL else 'missing'}, "
+            f"GMAIL_APP_PASSWORD: {'set' if settings.GMAIL_APP_PASSWORD else 'missing'}"
         )
-        logger.info(f"Password reset email sent. ID: {send_result['id']}")
-        return send_result
+        return False
 
-    except HttpError as error:
-        logger.error(f"Error sending password reset email: {error}")
-        return None
+    plain_text = f"Reset your password: {reset_link}"
+    html_content = f"""
+    <html>
+        <body>
+            <p>點選以下連結來重置你的密碼, 請在 {settings.RESET_TOKEN_EXPIRE_MINUTES} 分鐘內完成</p>
+            <p>
+                <a href="{reset_link}" style="
+                    padding: 10px 20px;
+                    background-color: #007BFF;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    display: inline-block;
+                ">重製密碼</a>
+            </p>
+        </body>
+    </html>
+    """
+
+    result = send_email_via_smtp(to_email, subject, html_content, plain_text)
+    if result:
+        logger.info(f"Password reset email sent to {to_email}")
+    else:
+        logger.error(f"Failed to send password reset email to {to_email}")
+    return result
 
 
 def send_verification_email(to_email: str, subject: str, verification_link: str):
-    """Send a verification email via Gmail API using OAuth2
+    """Send a verification email via Gmail SMTP
 
     Returns:
-        dict or None: Email send result if successful, None if email not configured or failed
+        bool: True if successful, False otherwise
     """
-    if not settings.FROM_EMAIL:
-        logger.warning("FROM_EMAIL not configured. Skipping verification email.")
-        return None
-
-    try:
-        creds = get_gmail_credentials()
-    except Exception as e:
-        logger.error(f"Failed to get Gmail credentials: {e}")
-        return None
-
-    try:
-        service = build("gmail", "v1", credentials=creds)
-
-        # Create message with both text and HTML versions
-        message = EmailMessage()
-        plain_text = f"Verify your email: {verification_link}"
-        html_content = f"""
-        <html>
-            <body>
-                <h2>歡迎註冊!</h2>
-                <p>請點選以下連結來驗證你的電子郵件地址:</p>
-                <p>
-                    <a href="{verification_link}" style="
-                        padding: 10px 20px;
-                        background-color: #28a745;
-                        color: white;
-                        text-decoration: none;
-                        border-radius: 4px;
-                        display: inline-block;
-                    ">驗證電子郵件</a>
-                </p>
-                <p>此連結將在 24 小時內有效。</p>
-            </body>
-        </html>
-        """
-
-        message.set_content(plain_text)
-        message.add_alternative(html_content, subtype="html")
-
-        message["To"] = to_email
-        message["From"] = settings.FROM_EMAIL
-        message["Subject"] = subject
-
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        create_message = {"raw": encoded_message}
-
-        send_result = (
-            service.users().messages().send(userId="me", body=create_message).execute()
+    if not settings.FROM_EMAIL or not settings.GMAIL_APP_PASSWORD:
+        logger.warning(
+            f"Email configuration incomplete. FROM_EMAIL: {'set' if settings.FROM_EMAIL else 'missing'}, "
+            f"GMAIL_APP_PASSWORD: {'set' if settings.GMAIL_APP_PASSWORD else 'missing'}"
         )
-        logger.info(f"Verification email sent. ID: {send_result['id']}")
-        return send_result
+        return False
 
-    except HttpError as error:
-        logger.error(f"Error sending verification email: {error}")
-        return None
+    plain_text = f"Verify your email: {verification_link}"
+    html_content = f"""
+    <html>
+        <body>
+            <h2>歡迎註冊!</h2>
+            <p>請點選以下連結來驗證你的電子郵件地址:</p>
+            <p>
+                <a href="{verification_link}" style="
+                    padding: 10px 20px;
+                    background-color: #28a745;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    display: inline-block;
+                ">驗證電子郵件</a>
+            </p>
+            <p>此連結將在 24 小時內有效。</p>
+        </body>
+    </html>
+    """
+
+    result = send_email_via_smtp(to_email, subject, html_content, plain_text)
+    if result:
+        logger.info(f"Verification email sent to {to_email}")
+    else:
+        logger.error(f"Failed to send verification email to {to_email}")
+    return result

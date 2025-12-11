@@ -41,12 +41,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     EXPIRES_DELTA: int
 
-    # Gmail Email API (Optional)
-    TOKEN_FILE: str = "app/service/gmail/token.json"
-    CREDENTIALS_FILE: str = "app/service/gmail/credentials.json"
-    SCOPES: list[str] = ["https://www.googleapis.com/auth/gmail.send"]
+    # Gmail SMTP Configuration (Optional)
     FROM_EMAIL: str | None = (
-        None  # Email address to send from (optional, required only for password reset)
+        None  # Gmail address to send from (optional, required only for password reset)
+    )
+    GMAIL_APP_PASSWORD: str | None = (
+        None  # Gmail App Password (not your regular password, generate at https://myaccount.google.com/apppasswords)
     )
     RESET_TOKEN_EXPIRE_MINUTES: int = 60
 

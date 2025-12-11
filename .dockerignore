@@ -40,6 +40,9 @@ yarn-error.log*
 docker-compose*.yml
 docker/
 !docker/nginx/zeabur.conf
+!docker/frontend/nginx.conf
+!docker/frontend/Dockerfile
+!docker/backend/Dockerfile
 .dockerignore
 
 # Frontend Development

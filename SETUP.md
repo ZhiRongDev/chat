@@ -128,11 +128,12 @@ This project uses external managed PostgreSQL (Zeabur, AWS RDS, Supabase, etc.).
 
 ### Email Configuration (Optional)
 
-| Variable     | Description                             | Required For                 |
-| ------------ | --------------------------------------- | ---------------------------- |
-| `FROM_EMAIL` | Email address for sending notifications | Password reset functionality |
+| Variable              | Description                              | Required For                 |
+| --------------------- | ---------------------------------------- | ---------------------------- |
+| `FROM_EMAIL`          | Gmail address for sending notifications  | Password reset functionality |
+| `GMAIL_APP_PASSWORD`  | Gmail App Password (16 characters)       | Password reset functionality |
 
-> **Note**: Requires Gmail API credentials setup (see Email Setup section)
+> **Note**: Requires Gmail SMTP setup with 2FA and App Password (see [README.md](README.md#setup-gmail-smtp) for details)
 
 ## Makefile Commands
 

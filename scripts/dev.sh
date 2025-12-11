@@ -8,8 +8,8 @@ echo "🚀 Starting development environment..."
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "⚠️  .env file not found. Creating from template..."
-    if [ -f backend/.env.template ]; then
-        cp backend/.env.template .env
+    if [ -f .env.template ]; then
+        cp .env.template .env
         echo "✅ Created .env file with default values."
         echo ""
         echo "⚠️  IMPORTANT: Default credentials are used!"

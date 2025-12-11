@@ -73,18 +73,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Set working directory to backend for the application
 WORKDIR /app/backend
 
-# Create credentials.json and token.json from environment variables
-# These files should not be committed to git, so we create them at build time
-# Set GOOGLE_CREDENTIALS_JSON and GOOGLE_TOKEN_JSON as build args or env vars
-RUN mkdir -p /app/backend/app/service/gmail && \
-    if [ -n "$GOOGLE_CREDENTIALS_JSON" ]; then \
-        echo "$GOOGLE_CREDENTIALS_JSON" > /app/backend/app/service/gmail/credentials.json && \
-        chmod 600 /app/backend/app/service/gmail/credentials.json; \
-    fi && \
-    if [ -n "$GOOGLE_TOKEN_JSON" ]; then \
-        echo "$GOOGLE_TOKEN_JSON" > /app/backend/app/service/gmail/token.json && \
-        chmod 600 /app/backend/app/service/gmail/token.json; \
-    fi
-
 # Start both nginx and backend
 CMD ["/app/start.sh"]
