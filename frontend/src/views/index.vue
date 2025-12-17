@@ -358,7 +358,7 @@ const messages = ref<Message[]>([
 ])
 const currentMessage = ref('')
 const loading = ref(false)
-const sidebarOpen = ref(true)
+const sidebarOpen = ref(window.innerWidth >= 768)
 const endOfMessages = ref<HTMLElement | null>(null)
 const messagesContainer = ref<HTMLElement | null>(null)
 const modalType = ref('')

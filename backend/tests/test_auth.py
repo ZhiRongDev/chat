@@ -107,9 +107,9 @@ def test_login(client: TestClient):
 
     assert response.status_code == 200
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
     assert data["user"]["username"] == "loginuser"
+    # Check that sessionId cookie is set
+    assert "sessionId" in response.cookies
 
 
 def test_login_invalid_credentials(client: TestClient):
@@ -222,12 +222,10 @@ def test_get_current_user(client: TestClient):
         },
     )
 
-    token = login_response.json()["access_token"]
-
-    # Get current user
+    # Get current user using cookie from login response
     response = client.get(
         "/api/v1/user/",
-        headers={"Authorization": f"Bearer {token}"},
+        cookies=login_response.cookies,
     )
 
     assert response.status_code == 200

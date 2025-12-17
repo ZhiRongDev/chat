@@ -129,7 +129,7 @@ docker-compose logs -f frontend
 - **Token verification**: `verify_access_token()` decodes JWT and validates user
 - **Protected routes**: Use `Depends(get_current_user)` dependency
 - **Password hashing**: bcrypt via `UserService.hash_the_password()`
-- **OAuth2 scheme**: Token URL at `/api/v1/token`
+- **Cookie-based auth**: JWT tokens stored in httpOnly cookies (sessionId)
 
 ### Router Structure
 

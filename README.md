@@ -458,17 +458,21 @@ curl -X POST http://localhost:5000/api/v1/user/ \
 **Login:**
 
 ```bash
-curl -X POST http://localhost:5000/api/v1/token \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=testuser&password=password123"
+curl -X POST http://localhost:5000/api/v1/user/login \
+  -H "Content-Type: application/json" \
+  -c cookies.txt \
+  -d '{
+    "username": "testuser",
+    "password": "password123"
+  }'
 ```
 
-**Chat (with authentication):**
+**Chat (with authentication using cookies):**
 
 ```bash
 curl -X POST http://localhost:5000/api/v1/chat/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -b cookies.txt \
   -d '{
     "message": "Hello, how are you?",
     "use_rag": false,
