@@ -90,19 +90,23 @@ npm run test:e2e -- --debug  # Debug mode
 ### Docker
 
 ```bash
-# Start all services (frontend, backend)
+# Start all services (frontend, backend, Redis)
 # Note: PostgreSQL should be configured as external service (Zeabur, AWS RDS, etc.)
-docker-compose up
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
 
 # Build and start
-docker-compose up --build
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 # Stop services
-docker-compose down
+docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 
 # View logs
 docker-compose logs -f backend
 docker-compose logs -f frontend
+docker-compose logs -f redis
+
+# Production deployment
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ## Backend Architecture
@@ -130,6 +134,20 @@ docker-compose logs -f frontend
 - **Protected routes**: Use `Depends(get_current_user)` dependency
 - **Password hashing**: bcrypt via `UserService.hash_the_password()`
 - **Cookie-based auth**: JWT tokens stored in httpOnly cookies (sessionId)
+
+### Rate Limiting (Redis)
+
+- **Implementation**: Sliding window rate limiter using Redis (`app/middleware/rate_limit.py`)
+- **Redis service**: Included in docker-compose (redis:7-alpine)
+- **Configuration** (in `.env`):
+  - `RATE_LIMIT_ENABLED`: Enable/disable rate limiting (default: true)
+  - `RATE_LIMIT_MESSAGES`: Max messages per window (default: 20)
+  - `RATE_LIMIT_WINDOW_SECONDS`: Time window in seconds (default: 1800 = 30 minutes)
+  - `REDIS_HOST`: Redis hostname (use `redis` for Docker, `localhost` for local dev)
+  - `REDIS_PORT`: Redis port (default: 6379)
+- **Protected endpoints**: Chat endpoints at `/api/v1/chat/` use `check_chat_rate_limit()` dependency
+- **Graceful degradation**: If Redis is unavailable, rate limiting is disabled (fails open)
+- **Per-user limits**: Rate limits are tracked per user ID using Redis sorted sets
 
 ### Router Structure
 

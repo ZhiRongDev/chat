@@ -41,6 +41,17 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     EXPIRES_DELTA: int
 
+    # Redis Configuration (for rate limiting)
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str | None = None
+    REDIS_DB: int = 0
+
+    # Rate Limiting Configuration
+    RATE_LIMIT_ENABLED: bool = True  # Enable/disable rate limiting
+    RATE_LIMIT_MESSAGES: int = 20  # Max messages per window
+    RATE_LIMIT_WINDOW_SECONDS: int = 1800  # 30 minutes in seconds
+
     # Gmail SMTP Configuration (Optional)
     FROM_EMAIL: str | None = (
         None  # Gmail address to send from (optional, required only for password reset)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Header
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Literal, Optional
@@ -9,14 +9,15 @@ from app.service.gemini_file_search_service import GeminiFileSearchService
 from app.model.user_model import User
 from app.model.document_model import Document
 import app.model
-from app.auth import get_current_user, get_current_user_optional
+from app.auth import get_current_user
+from app.middleware import check_chat_rate_limit
 from sqlmodel import Session, select
 import asyncio
 import logging
 
 
 nonauth_router = APIRouter(prefix="/chat", tags=["chat"])
-auth_router = APIRouter(prefix="/chat", tags=["chat"])
+auth_router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(get_current_user)])
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -30,10 +31,6 @@ class ChatPayload(BaseModel):
     use_search: bool = True
     use_rag: bool = False  # Enable RAG mode with Gemini File Search
     max_output_tokens: int = 2048  # Max tokens for RAG response
-    # User-provided API keys (optional, overrides env vars)
-    gemini_api_key: str | None = None
-    openai_api_key: str | None = None
-    anthropic_api_key: str | None = None
 
 
 class ChatStatusResponse(BaseModel):
@@ -64,38 +61,35 @@ async def get_chat_status():
     )
 
 
-@nonauth_router.post("/")
+@auth_router.post("/")
 async def chat_stream(
     payload: ChatPayload,
-    current_user: Optional[User] = Depends(get_current_user_optional),
-    x_gemini_api_key: Optional[str] = Header(None),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Chat endpoint with optional authentication
+    Chat endpoint (requires authentication and rate limiting)
 
     Features:
     - Multiple LLM providers (Gemini, OpenAI, Anthropic)
     - LangGraph-based reasoning workflow
     - Gemini File Search RAG mode (when use_rag=True)
-      - Requires authentication
       - Each user has their own personal document store (one store per user_id)
     - Optional Google Search integration via Serper or Tavily
     - Streaming responses
+    - Rate limiting: 20 messages per 30 minutes per user
 
     Args:
         payload: Chat payload with message and optional configuration
-        current_user: Current user from session cookie (None if not authenticated)
-        x_gemini_api_key: Optional Gemini API key via header (overrides payload.gemini_api_key)
+        current_user: Authenticated user (required)
 
     Returns:
         StreamingResponse with text/plain content
 
     Raises:
-        HTTPException: If message is missing or provider is not available
+        HTTPException: If message is missing, provider is not available, or rate limit exceeded
     """
-    # Header takes precedence over body for API key
-    if x_gemini_api_key:
-        payload.gemini_api_key = x_gemini_api_key
+    # Check rate limit before processing
+    check_chat_rate_limit(current_user.id)
 
     return await _chat_stream_internal(payload, current_user=current_user)
 
@@ -173,15 +167,13 @@ def _extract_document_references(grounding_metadata, session: Session) -> list[d
     return document_refs
 
 
-async def _chat_stream_internal(
-    payload: ChatPayload, current_user: Optional[User] = None
-):
+async def _chat_stream_internal(payload: ChatPayload, current_user: User):
     """
-    Internal chat stream handler used by both authenticated and non-authenticated endpoints
+    Internal chat stream handler
 
     Args:
         payload: Chat payload with message and optional configuration
-        current_user: Authenticated user (None if not authenticated)
+        current_user: Authenticated user (required)
 
     Returns:
         StreamingResponse with text/plain content
@@ -196,18 +188,17 @@ async def _chat_stream_internal(
 
     # Auto-detect provider if not specified
     if not payload.provider:
-        # Try to find an available provider based on API keys
-        if payload.gemini_api_key or settings.GEMINI_API_KEY:
+        # Try to find an available provider based on server-configured API keys
+        if settings.GEMINI_API_KEY:
             payload.provider = "gemini"
-        elif payload.openai_api_key or settings.OPENAI_API_KEY:
+        elif settings.OPENAI_API_KEY:
             payload.provider = "openai"
-        elif payload.anthropic_api_key or settings.ANTHROPIC_API_KEY:
+        elif settings.ANTHROPIC_API_KEY:
             payload.provider = "anthropic"
         else:
             raise HTTPException(
                 status_code=400,
-                detail="No API key configured. Please provide an API key for at least one provider "
-                "(Gemini, OpenAI, or Anthropic) in settings or environment variables.",
+                detail="No LLM API key configured on the server. Please contact your administrator.",
             )
 
     # Validate provider if specified
@@ -221,20 +212,20 @@ async def _chat_stream_internal(
                 f"Supported providers: {', '.join(supported_providers)}",
             )
 
-        # Check if API key is available (either from env or user-provided)
+        # Check if API key is available on server
         has_api_key = False
         if payload.provider == "gemini":
-            has_api_key = bool(payload.gemini_api_key or settings.GEMINI_API_KEY)
+            has_api_key = bool(settings.GEMINI_API_KEY)
         elif payload.provider == "openai":
-            has_api_key = bool(payload.openai_api_key or settings.OPENAI_API_KEY)
+            has_api_key = bool(settings.OPENAI_API_KEY)
         elif payload.provider == "anthropic":
-            has_api_key = bool(payload.anthropic_api_key or settings.ANTHROPIC_API_KEY)
+            has_api_key = bool(settings.ANTHROPIC_API_KEY)
 
         if not has_api_key:
             raise HTTPException(
                 status_code=400,
-                detail=f"API key for provider '{payload.provider}' is not configured. "
-                f"Please provide an API key or configure it in environment variables.",
+                detail=f"API key for provider '{payload.provider}' is not configured on the server. "
+                f"Please contact your administrator.",
             )
 
     try:
@@ -252,21 +243,14 @@ async def _chat_stream_internal(
                 payload.provider = "gemini"
 
             # Check Gemini API key
-            if not (payload.gemini_api_key or settings.GEMINI_API_KEY):
+            if not settings.GEMINI_API_KEY:
                 raise HTTPException(
                     status_code=400,
-                    detail="Gemini API key required for RAG mode. Please provide via gemini_api_key or configure in environment.",
+                    detail="Gemini API key required for RAG mode. Please contact your administrator.",
                 )
 
-            # Initialize Gemini service with user-provided API key (if available)
-            gemini_service = GeminiFileSearchService(api_key=payload.gemini_api_key)
-
-            # RAG requires authentication - each user has their own document store
-            if not current_user:
-                raise HTTPException(
-                    status_code=401,
-                    detail="RAG mode requires authentication. Please log in to use document-based responses.",
-                )
+            # Initialize Gemini service with server-configured API key
+            gemini_service = GeminiFileSearchService()
 
             # Get user's personal File Search Store
             with Session(app.model.engine) as session:
@@ -368,9 +352,6 @@ async def _chat_stream_internal(
                 model=payload.model,
                 temperature=payload.temperature,
                 use_search=payload.use_search,
-                gemini_api_key=payload.gemini_api_key,
-                openai_api_key=payload.openai_api_key,
-                anthropic_api_key=payload.anthropic_api_key,
             )
 
             async def stream_messages():
