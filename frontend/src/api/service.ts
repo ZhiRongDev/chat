@@ -5,6 +5,7 @@ import axios, {
   type AxiosResponse,
 } from 'axios'
 import { useUserStore } from '@/stores/user'
+import { appendAlert } from '@/utils/alert'
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -55,7 +56,7 @@ api.interceptors.response.use(
           break
         case 403:
           // Forbidden, show a message
-          alert('You do not have permission to perform this action.')
+          appendAlert('You do not have permission to perform this action.', 'danger')
           break
         case 500:
           // Internal server error

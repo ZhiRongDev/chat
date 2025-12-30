@@ -2,84 +2,6 @@
   <div class="chat-settings">
     <h4>Chat Settings</h4>
 
-    <!-- LLM Provider Settings -->
-    <div class="settings-section">
-      <h5>
-        <i class="bi bi-robot"></i>
-        LLM Provider
-      </h5>
-
-      <div class="setting-item">
-        <label for="provider">Provider</label>
-        <select v-model="localSettings.provider" class="form-select" id="provider">
-          <option value="">Auto-detect (uses first available API key)</option>
-          <option value="gemini">Google Gemini (Required for RAG)</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic Claude</option>
-        </select>
-        <small class="text-muted">
-          <strong>Note:</strong> RAG mode requires Gemini provider. Auto-detect priority: Gemini →
-          OpenAI → Anthropic
-        </small>
-      </div>
-
-      <div class="setting-item">
-        <label for="model">Model (optional)</label>
-        <input v-model="localSettings.model" type="text" class="form-control" id="model"
-          placeholder="e.g., gpt-4, gemini-pro, gemini-2.5-flash-lite" />
-        <small class="text-muted"> Leave empty to use provider's default model </small>
-      </div>
-
-      <div class="setting-item">
-        <label for="temperature">Temperature: {{ localSettings.temperature.toFixed(1) }}</label>
-        <input v-model.number="localSettings.temperature" type="range" class="form-range" id="temperature" min="0"
-          max="2" step="0.1" />
-        <small class="text-muted"> Lower = more focused, Higher = more creative (0.0-2.0) </small>
-      </div>
-    </div>
-
-    <!-- API Keys Settings -->
-    <div class="settings-section">
-      <h5>
-        <i class="bi bi-key"></i>
-        API Keys
-      </h5>
-      <small class="text-muted mb-3 d-block">
-        Enter your API keys to use the respective LLM providers. Keys are stored locally in your
-        browser.
-      </small>
-
-      <div class="setting-item">
-        <label for="geminiApiKey">Google Gemini API Key <span class="text-danger">*Required for RAG</span></label>
-        <input v-model="localSettings.geminiApiKey" type="password" class="form-control" id="geminiApiKey"
-          placeholder="Enter your Gemini API key" />
-        <small class="text-muted">
-          Get your API key from
-          <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
-        </small>
-      </div>
-
-      <div class="setting-item">
-        <label for="openaiApiKey">OpenAI API Key</label>
-        <input v-model="localSettings.openaiApiKey" type="password" class="form-control" id="openaiApiKey"
-          placeholder="Enter your OpenAI API key" />
-        <small class="text-muted">
-          Get your API key from
-          <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
-        </small>
-      </div>
-
-      <div class="setting-item">
-        <label for="anthropicApiKey">Anthropic Claude API Key</label>
-        <input v-model="localSettings.anthropicApiKey" type="password" class="form-control" id="anthropicApiKey"
-          placeholder="Enter your Anthropic API key" />
-        <small class="text-muted">
-          Get your API key from
-          <a href="https://console.anthropic.com/settings/keys" target="_blank">Anthropic Console</a>
-        </small>
-      </div>
-    </div>
-
     <!-- RAG Settings (Only show when logged in) -->
     <div v-if="isLoggedIn" class="settings-section">
       <h5>
@@ -129,11 +51,11 @@
         </button>
       </div>
 
-      <!-- API Key Binding Notice -->
+      <!-- Document Store Notice -->
       <div class="info-banner">
         <i class="bi bi-info-circle"></i>
         <div class="info-content">
-          <span>Your documents are stored in a Gemini File Search store that is bound to your current API key. If you switch to a different Gemini API key, you'll access a different document store. Switching back to a previous API key will restore access to that key's documents.</span>
+          <span>Your documents are stored in your personal Gemini File Search store. Each user has their own isolated document library that persists across sessions.</span>
         </div>
       </div>
 
@@ -272,12 +194,6 @@ import api from '@/api/service'
 export interface ChatSettings {
   useRag: boolean
   maxOutputTokens: number
-  provider: string
-  model: string
-  temperature: number
-  geminiApiKey: string
-  openaiApiKey: string
-  anthropicApiKey: string
 }
 
 const props = defineProps<{
@@ -313,12 +229,6 @@ const resetSettings = () => {
   const defaults: ChatSettings = {
     useRag: false,
     maxOutputTokens: 2048,
-    provider: '',
-    model: '',
-    temperature: 0.7,
-    geminiApiKey: '',
-    openaiApiKey: '',
-    anthropicApiKey: '',
   }
   localSettings.value = { ...defaults }
   saveSettings()
@@ -367,12 +277,6 @@ watch(isLoggedIn, (newValue) => {
   }
 })
 
-// Watch for Gemini API key changes and refresh documents
-watch(() => localSettings.value.geminiApiKey, () => {
-  if (isLoggedIn.value) {
-    fetchDocuments()
-  }
-})
 
 // File upload handlers
 const triggerFileInput = () => {
@@ -410,16 +314,11 @@ const uploadFile = async () => {
     const formData = new FormData()
     formData.append('file', selectedFile.value)
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'multipart/form-data',
-    }
-
-    // Add Gemini API key header if available
-    if (localSettings.value.geminiApiKey) {
-      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
-    }
-
-    await api.post('/documents/upload', formData, { headers })
+    await api.post('/documents/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
 
     uploadStatus.value = {
       type: 'success',
@@ -449,17 +348,10 @@ const uploadText = async () => {
   uploadStatus.value = null
 
   try {
-    const headers: Record<string, string> = {}
-
-    // Add Gemini API key header if available
-    if (localSettings.value.geminiApiKey) {
-      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
-    }
-
     await api.post('/documents/ingest/text', {
       title: textDocument.value.title,
       content: textDocument.value.content,
-    }, Object.keys(headers).length > 0 ? { headers } : undefined)
+    })
 
     uploadStatus.value = {
       type: 'success',
@@ -484,7 +376,7 @@ const uploadText = async () => {
 
 // Document management functions
 const fetchDocuments = async () => {
-  console.log('fetchDocuments called, isLoggedIn:', isLoggedIn.value, 'hasGeminiKey:', !!localSettings.value.geminiApiKey)
+  console.log('fetchDocuments called, isLoggedIn:', isLoggedIn.value)
   loadingDocuments.value = true
   try {
     // If not logged in, just set empty array and return
@@ -495,18 +387,8 @@ const fetchDocuments = async () => {
       return
     }
 
-    const headers: Record<string, string> = {}
-
-    // Add Gemini API key header if available
-    if (localSettings.value.geminiApiKey) {
-      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
-      console.log('Added Gemini API key to headers')
-    } else {
-      console.warn('No Gemini API key available for document fetch')
-    }
-
-    console.log('Fetching documents from /documents/ with headers:', Object.keys(headers))
-    const response = await api.get('/documents/', Object.keys(headers).length > 0 ? { headers } : undefined)
+    console.log('Fetching documents from /documents/')
+    const response = await api.get('/documents/')
     console.log('Documents fetched successfully, count:', response.data.length)
     documents.value = response.data
   } catch (error: any) {
@@ -545,14 +427,7 @@ const confirmDeleteDocument = (documentId: string) => {
 
 const deleteDocument = async (documentId: string) => {
   try {
-    const headers: Record<string, string> = {}
-
-    // Add Gemini API key header if available
-    if (localSettings.value.geminiApiKey) {
-      headers['x-gemini-api-key'] = localSettings.value.geminiApiKey
-    }
-
-    await api.delete(`/documents/${documentId}`, Object.keys(headers).length > 0 ? { headers } : undefined)
+    await api.delete(`/documents/${documentId}`)
 
     uploadStatus.value = {
       type: 'success',
@@ -634,19 +509,15 @@ const loadSettings = () => {
     try {
       const parsed = JSON.parse(saved)
       console.log('Parsed settings from localStorage:', {
-        hasGeminiKey: !!parsed.geminiApiKey,
-        provider: parsed.provider,
-        useRag: parsed.useRag
+        useRag: parsed.useRag,
+        maxOutputTokens: parsed.maxOutputTokens
       })
-      // Migrate old settings: remove topK and minScore, add maxOutputTokens
-      if ('topK' in parsed || 'minScore' in parsed) {
-        delete parsed.topK
-        delete parsed.minScore
-        if (!('maxOutputTokens' in parsed)) {
-          parsed.maxOutputTokens = 2048
-        }
+      // Migrate old settings: remove deprecated fields
+      const cleanedSettings: ChatSettings = {
+        useRag: parsed.useRag ?? false,
+        maxOutputTokens: parsed.maxOutputTokens ?? 2048,
       }
-      localSettings.value = { ...localSettings.value, ...parsed }
+      localSettings.value = cleanedSettings
       emit('update:modelValue', localSettings.value)
       console.log('Settings loaded and applied to localSettings')
     } catch (e) {
@@ -657,11 +528,11 @@ const loadSettings = () => {
   }
 }
 
-// Load settings FIRST, then fetch documents (so API key is available)
+// Load settings and fetch documents on mount
 console.log('Component mount: loading settings and fetching documents')
 loadSettings()
 
-// Load documents on mount - must be AFTER loadSettings() so API key is available
+// Load documents on mount
 // Use nextTick to ensure settings are fully applied before fetching
 nextTick(() => {
   console.log('nextTick: checking if should fetch documents, isLoggedIn:', isLoggedIn.value)

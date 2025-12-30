@@ -1,3 +1,5 @@
+# This script is for checking the contents of a Gemini File Search Store
+
 from google import genai
 
 # 1. Initialize Client

@@ -10,6 +10,9 @@ from contextlib import asynccontextmanager
 from app.utils import set_snowflake_generator
 from snowflake import SnowflakeGenerator
 
+# Import rate limiter early to ensure it initializes
+from app.middleware import rate_limiter
+
 logger = logging.getLogger(__name__)
 
 

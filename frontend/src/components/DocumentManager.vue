@@ -37,12 +37,8 @@
       </div>
 
       <div v-else class="document-items">
-        <div
-          v-for="doc in documents"
-          :key="doc.id"
-          class="document-item"
-          :class="{ 'processing': doc.status === 'processing' }"
-        >
+        <div v-for="doc in documents" :key="doc.id" class="document-item"
+          :class="{ 'processing': doc.status === 'processing' }">
           <div class="document-icon">
             <i :class="getDocumentIcon(doc.content_type)"></i>
           </div>
@@ -61,17 +57,11 @@
             </div>
           </div>
           <div class="document-actions">
-            <button
-              class="btn btn-sm btn-outline-primary"
-              @click="viewDocument(doc)"
-              :disabled="doc.status !== 'completed'"
-            >
+            <button class="btn btn-sm btn-outline-primary" @click="viewDocument(doc)"
+              :disabled="doc.status !== 'completed'">
               <i class="bi bi-eye"></i>
             </button>
-            <button
-              class="btn btn-sm btn-outline-danger"
-              @click="deleteDocument(doc)"
-            >
+            <button class="btn btn-sm btn-outline-danger" @click="deleteDocument(doc)">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -88,22 +78,13 @@
         </div>
         <div class="modal-body">
           <div class="upload-tabs">
-            <button
-              :class="{ active: uploadTab === 'file' }"
-              @click="uploadTab = 'file'"
-            >
+            <button :class="{ active: uploadTab === 'file' }" @click="uploadTab = 'file'">
               File Upload
             </button>
-            <button
-              :class="{ active: uploadTab === 'text' }"
-              @click="uploadTab = 'text'"
-            >
+            <button :class="{ active: uploadTab === 'text' }" @click="uploadTab = 'text'">
               Text Input
             </button>
-            <button
-              :class="{ active: uploadTab === 'url' }"
-              @click="uploadTab = 'url'"
-            >
+            <button :class="{ active: uploadTab === 'url' }" @click="uploadTab = 'url'">
               From URL
             </button>
           </div>
@@ -111,13 +92,8 @@
           <!-- File Upload Tab -->
           <div v-if="uploadTab === 'file'" class="upload-section">
             <div class="file-drop-zone" @drop.prevent="handleFileDrop" @dragover.prevent>
-              <input
-                type="file"
-                ref="fileInput"
-                @change="handleFileSelect"
-                accept=".pdf,.txt,.md"
-                style="display: none"
-              />
+              <input type="file" ref="fileInput" @change="handleFileSelect" accept=".pdf,.txt,.md"
+                style="display: none" />
               <i class="bi bi-cloud-upload"></i>
               <p>Drag and drop a file here, or</p>
               <button class="btn btn-outline-primary" @click="fileInput?.click()">
@@ -138,21 +114,12 @@
           <div v-if="uploadTab === 'text'" class="upload-section">
             <div class="mb-3">
               <label class="form-label">Title</label>
-              <input
-                v-model="textTitle"
-                type="text"
-                class="form-control"
-                placeholder="Enter document title"
-              />
+              <input v-model="textTitle" type="text" class="form-control" placeholder="Enter document title" />
             </div>
             <div class="mb-3">
               <label class="form-label">Content</label>
-              <textarea
-                v-model="textContent"
-                class="form-control"
-                rows="10"
-                placeholder="Paste or type your content here..."
-              ></textarea>
+              <textarea v-model="textContent" class="form-control" rows="10"
+                placeholder="Paste or type your content here..."></textarea>
             </div>
           </div>
 
@@ -160,21 +127,11 @@
           <div v-if="uploadTab === 'url'" class="upload-section">
             <div class="mb-3">
               <label class="form-label">URL</label>
-              <input
-                v-model="urlInput"
-                type="url"
-                class="form-control"
-                placeholder="https://example.com/article"
-              />
+              <input v-model="urlInput" type="url" class="form-control" placeholder="https://example.com/article" />
             </div>
             <div class="mb-3">
               <label class="form-label">Title (optional)</label>
-              <input
-                v-model="urlTitle"
-                type="text"
-                class="form-control"
-                placeholder="Auto-detected from page"
-              />
+              <input v-model="urlTitle" type="text" class="form-control" placeholder="Auto-detected from page" />
             </div>
           </div>
 
@@ -190,11 +147,7 @@
           <button class="btn btn-secondary" @click="closeUploadModal" :disabled="uploading">
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="handleUpload"
-            :disabled="!canUpload || uploading"
-          >
+          <button class="btn btn-primary" @click="handleUpload" :disabled="!canUpload || uploading">
             <span v-if="uploading">Uploading...</span>
             <span v-else>Upload</span>
           </button>
@@ -244,6 +197,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { documentsApi, type Document, type DocumentDetail, type DocumentStats } from '@/api/documents'
+import { appendAlert } from '@/utils/alert';
 
 const props = defineProps<{
   geminiApiKey?: string
@@ -349,7 +303,7 @@ const viewDocument = async (doc: Document) => {
     showDetailModal.value = true
   } catch (error: any) {
     console.error('Failed to load document details:', error)
-    alert('Failed to load document details')
+    appendAlert('Failed to load document details', 'danger')
   }
 }
 
@@ -363,7 +317,7 @@ const deleteDocument = async (doc: Document) => {
     await loadStats()
   } catch (error: any) {
     console.error('Failed to delete document:', error)
-    alert('Failed to delete document')
+    appendAlert('Failed to delete document', 'danger')
   }
 }
 
