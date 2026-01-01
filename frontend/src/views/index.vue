@@ -332,12 +332,6 @@ const loadChatSettings = (): ChatSettingsType => {
   return {
     useRag: false,
     maxOutputTokens: 2048,
-    provider: '',
-    model: '',
-    temperature: 0.7,
-    geminiApiKey: '',
-    openaiApiKey: '',
-    anthropicApiKey: '',
   }
 }
 
@@ -540,28 +534,6 @@ const sendMessage = async () => {
         payload.use_rag = true
         payload.max_output_tokens = chatSettings.value.maxOutputTokens
       }
-    }
-
-    // Add LLM provider settings if specified
-    if (chatSettings.value.provider) {
-      payload.provider = chatSettings.value.provider
-    }
-    if (chatSettings.value.model) {
-      payload.model = chatSettings.value.model
-    }
-    if (chatSettings.value.temperature !== 0.7) {
-      payload.temperature = chatSettings.value.temperature
-    }
-
-    // Add API keys if provided
-    if (chatSettings.value.geminiApiKey) {
-      payload.gemini_api_key = chatSettings.value.geminiApiKey
-    }
-    if (chatSettings.value.openaiApiKey) {
-      payload.openai_api_key = chatSettings.value.openaiApiKey
-    }
-    if (chatSettings.value.anthropicApiKey) {
-      payload.anthropic_api_key = chatSettings.value.anthropicApiKey
     }
 
     // use /chat/ but not /chat to prevent HTTP & HTTPS mixup errors (Dont know why this is needed) 
