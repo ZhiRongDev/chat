@@ -33,7 +33,7 @@ Here's a visual representation of the LangGraph workflow if _build_graph() is ca
 """
 
 from typing import TypedDict, Annotated, Sequence, AsyncIterator
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
@@ -183,6 +183,67 @@ class ChatAgentGraph:
 
         return "respond"
 
+    def _prepare_messages_for_response(self, messages: Sequence[BaseMessage]) -> list[BaseMessage]:
+        """
+        Prepare messages for final response generation, handling Gemini's conversation requirements.
+
+        Gemini requires conversations to end with a user message. When search tools are used,
+        the message history contains AIMessages with tool_calls followed by ToolMessages.
+        This method cleans the message history to be compatible with Gemini.
+
+        Args:
+            messages: Raw message history from state
+
+        Returns:
+            Cleaned message list compatible with Gemini API
+        """
+        # Separate user messages, search results, and final AI responses
+        user_messages = []
+        search_results = []
+        ai_responses = []
+
+        for msg in messages:
+            if isinstance(msg, HumanMessage):
+                user_messages.append(msg)
+            elif isinstance(msg, ToolMessage):
+                # Collect search results
+                search_results.append(str(msg.content))
+            elif isinstance(msg, AIMessage):
+                # Only keep AI messages that are NOT tool calls (final responses)
+                if not (hasattr(msg, "tool_calls") and msg.tool_calls):
+                    ai_responses.append(msg)
+
+        # Build cleaned message list
+        cleaned_messages = []
+
+        # Add user messages (conversation history)
+        cleaned_messages.extend(user_messages)
+
+        # If we have search results, append them to the last user message
+        if search_results and user_messages:
+            # Enhance the last user message with search context
+            last_user_msg = cleaned_messages[-1]
+            original_content = last_user_msg.content
+            context_text = "\n\n".join(search_results)
+            enhanced_content = (
+                f"{original_content}\n\n"
+                f"[Search Results for Context]:\n{context_text}"
+            )
+            cleaned_messages[-1] = HumanMessage(content=enhanced_content)
+
+        # Add any final AI responses (for multi-turn conversations)
+        cleaned_messages.extend(ai_responses)
+
+        # Fallback: ensure we have at least one message
+        if not cleaned_messages and messages:
+            # If somehow all messages were filtered, return the original human message
+            for msg in messages:
+                if isinstance(msg, HumanMessage):
+                    cleaned_messages.append(msg)
+                    break
+
+        return cleaned_messages
+
     def _generate_response(self, state: AgentState) -> dict:
         """
         Generate the final response based on conversation history and search results
@@ -195,6 +256,9 @@ class ChatAgentGraph:
         """
         messages = state["messages"]
 
+        # Clean messages for Gemini compatibility
+        cleaned_messages = self._prepare_messages_for_response(messages)
+
         # Add system message for final response
         system_prompt = SystemMessage(
             content=(
@@ -205,7 +269,7 @@ class ChatAgentGraph:
             )
         )
 
-        response = self.llm.invoke([system_prompt] + list(messages))
+        response = self.llm.invoke([system_prompt] + cleaned_messages)
 
         return {
             "messages": [response],
@@ -233,8 +297,12 @@ class ChatAgentGraph:
             # Run analyzer to check if search is needed
             analyzer_state = self._analyze_query(initial_state)
 
-            # Merge analyzer state
-            current_state = {**initial_state, **analyzer_state}
+            # Properly merge messages (don't replace initial HumanMessage!)
+            current_state = {
+                "messages": initial_state["messages"] + analyzer_state.get("messages", []),
+                "needs_search": analyzer_state.get("needs_search", False),
+                "final_response": "",
+            }
 
             # If search is needed, run search
             if self._should_search(current_state) == "search":
@@ -256,6 +324,9 @@ class ChatAgentGraph:
             # No search tools, use initial messages
             messages = initial_state["messages"]
 
+        # Clean messages for Gemini compatibility
+        cleaned_messages = self._prepare_messages_for_response(messages)
+
         # Add system message for final response
         system_prompt = SystemMessage(
             content=(
@@ -267,7 +338,7 @@ class ChatAgentGraph:
         )
 
         # Stream the LLM response in real-time
-        async for chunk in self.llm.astream([system_prompt] + list(messages)):
+        async for chunk in self.llm.astream([system_prompt] + cleaned_messages):
             if hasattr(chunk, 'content') and chunk.content:
                 yield chunk.content
 
