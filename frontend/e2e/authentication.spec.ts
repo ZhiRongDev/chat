@@ -32,12 +32,8 @@ test.describe('Authentication Modals', () => {
     const closeButton = page.locator('.btn-close');
     await closeButton.click();
 
-    // Wait for modal to close
-    await page.waitForTimeout(500);
-
-    const modal = page.locator('#appModal');
-    const isHidden = await modal.evaluate(el => !el.classList.contains('show'));
-    expect(isHidden).toBe(true);
+    // Wait for modal to be hidden (with proper assertion)
+    await expect(page.locator('#appModal.show')).not.toBeVisible({ timeout: 1000 });
   });
 
   test('should close modal when clicking Cancel button', async ({ page }) => {
@@ -49,8 +45,8 @@ test.describe('Authentication Modals', () => {
     const cancelButton = page.locator('button:has-text("Cancel")');
     await cancelButton.click();
 
-    // Wait for modal to close
-    await page.waitForTimeout(500);
+    // Wait for modal to be hidden (with proper assertion)
+    await expect(page.locator('#appModal.show')).not.toBeVisible({ timeout: 1000 });
   });
 });
 
@@ -298,11 +294,12 @@ test.describe('Form Validation', () => {
     const closeButton = page.locator('.btn-close');
     await closeButton.click();
 
-    // Wait for modal to close
-    await page.waitForTimeout(500);
+    // Wait for modal to be hidden
+    await expect(page.locator('#appModal.show')).not.toBeVisible({ timeout: 1000 });
 
     // Reopen modal
     await loginButton.click();
+    await expect(page.locator('#appModal')).toBeVisible();
 
     // Fields should be cleared
     await expect(usernameInput).toHaveValue('');

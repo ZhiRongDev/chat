@@ -36,6 +36,7 @@ describe('App', () => {
         plugins: [pinia, router],
       },
     })
-    expect(wrapper.html()).toContain('router-view')
+    // Check that RouterView component exists (it renders as a div in tests)
+    expect(wrapper.findComponent({ name: 'RouterView' }).exists()).toBe(true)
   })
 })

@@ -8,8 +8,8 @@ echo "🚀 Starting development environment..."
 # Check if .env file exists
 if [ ! -f .env ]; then
     echo "⚠️  .env file not found. Creating from template..."
-    if [ -f backend/.env.template ]; then
-        cp backend/.env.template .env
+    if [ -f .env.template ]; then
+        cp .env.template .env
         echo "✅ Created .env file with default values."
         echo ""
         echo "⚠️  IMPORTANT: Default credentials are used!"
@@ -51,8 +51,9 @@ echo ""
 echo "📝 Services:"
 echo "   - Frontend: http://localhost:5173"
 echo "   - Backend:  http://localhost:5000"
-echo "   - PostgreSQL: localhost:5432"
-echo "   - Redis: localhost:6379"
+echo ""
+echo "📦 Database:"
+echo "   - Configure your external PostgreSQL in .env"
 echo ""
 echo "📋 Useful commands:"
 echo "   - View logs: docker-compose -f docker-compose.yml -f docker-compose.dev.yml logs -f"

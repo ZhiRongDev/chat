@@ -34,12 +34,11 @@
             <label for="new-password" class="form-label">New Password</label>
             <div class="password-input-wrapper">
               <input
-                v-model="resetPasswordForm.newPassword"
+                v-model="newPassword"
                 :type="showNewPassword ? 'text' : 'password'"
                 class="form-control"
                 id="new-password"
                 placeholder="Enter your new password"
-                required
                 :disabled="formLoading"
               />
               <button
@@ -84,18 +83,20 @@
                 </svg>
               </button>
             </div>
+            <div v-if="errors.newPassword" class="invalid-feedback d-block">
+              {{ errors.newPassword }}
+            </div>
           </div>
 
           <div class="mb-3">
             <label for="confirm-password" class="form-label">Confirm New Password</label>
             <div class="password-input-wrapper">
               <input
-                v-model="resetPasswordForm.confirmPassword"
+                v-model="confirmPassword"
                 :type="showConfirmPassword ? 'text' : 'password'"
                 class="form-control"
                 id="confirm-password"
                 placeholder="Confirm your new password"
-                required
                 :disabled="formLoading"
               />
               <button
@@ -140,6 +141,9 @@
                 </svg>
               </button>
             </div>
+            <div v-if="errors.confirmPassword" class="invalid-feedback d-block">
+              {{ errors.confirmPassword }}
+            </div>
           </div>
 
           <div class="d-grid gap-2">
@@ -163,22 +167,27 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useForm, useField } from 'vee-validate'
 import { userApi } from '@/api/user'
-import { appendAlert } from '@/utils/alert'
+import { resetPasswordSchema } from '@/utils/validation'
 
 const route = useRoute()
 const router = useRouter()
-
-const resetPasswordForm = ref({
-  newPassword: '',
-  confirmPassword: '',
-})
 
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
+
+// VeeValidate form setup
+const { handleSubmit, errors } = useForm({
+  validationSchema: resetPasswordSchema,
+})
+
+// Define fields with validation
+const { value: newPassword } = useField<string>('newPassword')
+const { value: confirmPassword } = useField<string>('confirmPassword')
 
 onMounted(() => {
   // Validate that we have the required token
@@ -190,22 +199,7 @@ onMounted(() => {
   }
 })
 
-const handleResetPassword = async () => {
-  if (!resetPasswordForm.value.newPassword || !resetPasswordForm.value.confirmPassword) {
-    errorMessage.value = 'Please fill in all fields'
-    return
-  }
-
-  if (resetPasswordForm.value.newPassword !== resetPasswordForm.value.confirmPassword) {
-    errorMessage.value = 'Passwords do not match!'
-    return
-  }
-
-  if (resetPasswordForm.value.newPassword.length < 6) {
-    errorMessage.value = 'Password must be at least 6 characters long'
-    return
-  }
-
+const handleResetPassword = handleSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
@@ -219,7 +213,7 @@ const handleResetPassword = async () => {
 
     const response = await userApi.resetPassword({
       token,
-      new_password: resetPasswordForm.value.newPassword,
+      new_password: values.newPassword,
     })
 
     successMessage.value = response.message
@@ -238,7 +232,7 @@ const handleResetPassword = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 
 const goToHome = () => {
   router.push('/')
@@ -328,6 +322,15 @@ const goToHome = () => {
   transition: all 0.2s ease;
   background-color: #fff;
   font-family: inherit;
+}
+
+.form-control.is-invalid {
+  border-color: #dc2626;
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
 }
 
 @media (max-width: 768px) {
@@ -515,6 +518,21 @@ const goToHome = () => {
   background-color: #f3f4f6;
   border-color: #9ca3af;
   transform: translateY(0);
+}
+
+/* Validation Feedback */
+.invalid-feedback {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .invalid-feedback {
+    font-size: 12px;
+    margin-top: 4px;
+  }
 }
 
 /* Spinner Styles */

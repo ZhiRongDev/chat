@@ -29,12 +29,12 @@ echo "3️⃣  Checking .env file..."
 if [ ! -f .env ]; then
     echo "⚠️  .env file not found"
     echo "   Creating from template..."
-    if [ -f backend/.env.template ]; then
-        cp backend/.env.template .env
+    if [ -f .env.template ]; then
+        cp .env.template .env
         echo "✅ .env file created from template"
         echo "   ⚠️  Please edit .env with your configuration before running"
     else
-        echo "❌ backend/.env.template not found"
+        echo "❌ .env.template not found"
         exit 1
     fi
 else
@@ -116,8 +116,6 @@ check_port() {
 
 check_port 5173 "Frontend Dev"
 check_port 5000 "Backend"
-check_port 5432 "PostgreSQL"
-check_port 6379 "Redis"
 check_port 80 "Frontend Prod"
 echo ""
 

@@ -30,24 +30,6 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=True
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: sh -c "alembic upgrade head && python main.py"
-
-  db:
-    ports:
-      - "5432:5432"
-    # Use a development-specific volume to avoid data conflicts
-    volumes:
-      - pg_data_dev:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_DB=${POSTGRES_DB:-chat_dev}
-
-  redis:
-    ports:
-      - "6379:6379"
-    # Use a development-specific volume
-    volumes:
-      - redis_data_dev:/data
-
-volumes:
-  pg_data_dev:
-  redis_data_dev:

@@ -50,6 +50,7 @@ class GeminiFileSearchStore(SQLModel, table=True):
     """
     Gemini File Search Store configuration
     Tracks File Search Stores for different users or contexts
+    Each store is tied to a specific Gemini API key (identified by hash)
     """
     __tablename__ = "gemini_file_search_store"
 
@@ -61,6 +62,7 @@ class GeminiFileSearchStore(SQLModel, table=True):
         sa_column=Column(BigInteger, ForeignKey("user.id", ondelete="CASCADE"), nullable=True),
         default=None,
     )
+    api_key_hash: str = Field(max_length=64)  # SHA-256 hash of API key (for identifying which key created this store)
     store_name: str = Field(max_length=255)  # Gemini store resource name (e.g., "file_search_stores/abc123")
     display_name: str = Field(max_length=255)  # User-friendly name
     description: Optional[str] = Field(default=None, sa_column=Column(Text))

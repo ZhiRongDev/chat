@@ -2,18 +2,15 @@ import jwt
 from app.config import settings
 from pydantic import BaseModel
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status, Cookie
 from app.service.user_service import UserService
-
-
-# This will check the response of '/api/v1/token'
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
+from typing import Optional
 
 
 class CreateAccessTokenPayload(BaseModel):
     sub: str  # username
     reset: bool = False  # Flag for password reset tokens
+    verify: bool = False  # Flag for email verification tokens
 
 
 class VerifyAccessTokenReturn(BaseModel):
@@ -43,19 +40,74 @@ def verify_access_token(token: str) -> dict:
     return result
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    token_data = verify_access_token(token)
-    username = token_data.get("sub")
-    if not username:
+async def get_current_user(sessionId: Optional[str] = Cookie(None)):
+    """
+    Get current user from session cookie.
+
+    Args:
+        sessionId: JWT token from httpOnly cookie
+
+    Returns:
+        User object if authenticated
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    if not sessionId:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Not authenticated",
         )
-    user_service = UserService()
-    user = user_service.get_user_by_username(username)
-    if user is None:
+
+    try:
+        token_data = verify_access_token(sessionId)
+        username = token_data.get("sub")
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        user_service = UserService()
+        user = user_service.get_user_by_username(username)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        return user
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Session expired",
         )
-    return user
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid session",
+        )
+
+
+async def get_current_user_optional(sessionId: Optional[str] = Cookie(None)):
+    """
+    Get current user from session cookie, but return None if not authenticated.
+    Used for endpoints that support both authenticated and non-authenticated access.
+
+    Args:
+        sessionId: JWT token from httpOnly cookie
+
+    Returns:
+        User object if authenticated, None otherwise
+    """
+    if not sessionId:
+        return None
+
+    try:
+        token_data = verify_access_token(sessionId)
+        username = token_data.get("sub")
+        if not username:
+            return None
+        user_service = UserService()
+        user = user_service.get_user_by_username(username)
+        return user
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        return None

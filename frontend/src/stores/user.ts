@@ -5,17 +5,15 @@ import { userApi, type LoginPayload, type RegisterPayload } from '@/api/user'
 export const useUserStore = defineStore('user', () => {
   const user = ref({
     username: '',
-    token: '',
   })
 
   const login = async (payload: LoginPayload) => {
     const response = await userApi.login(payload)
     user.value = {
       username: response.user.username,
-      token: response.access_token,
     }
-    // Store token in localStorage for persistence
-    localStorage.setItem('token', response.access_token)
+    // Store username in localStorage for persistence
+    // Session cookie is set by backend automatically
     localStorage.setItem('username', response.user.username)
     return response
   }
@@ -25,24 +23,31 @@ export const useUserStore = defineStore('user', () => {
     return response
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      // Call logout endpoint to clear session cookie
+      // This might fail if cookie is already cleared/expired, which is fine
+      await userApi.logout()
+    } catch (e: any) {
+      // Ignore 401 errors (cookie already invalid), but log other errors
+      if (e?.response?.status !== 401) {
+        console.error('Logout API call failed:', e)
+      }
+    }
     user.value = {
       username: '',
-      token: '',
     }
     // Clear localStorage
-    localStorage.removeItem('token')
     localStorage.removeItem('username')
   }
 
   const initializeUser = () => {
-    // Restore user from localStorage if available
-    const token = localStorage.getItem('token')
+    // Restore username from localStorage if available
+    // Session validity is checked by backend via cookie
     const username = localStorage.getItem('username')
-    if (token && username) {
+    if (username) {
       user.value = {
         username,
-        token,
       }
     }
   }

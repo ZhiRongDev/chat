@@ -1,8 +1,5 @@
-# Gmail Email API
-token.json
-credentials.json
-
 .env
+.env.backup
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -136,11 +133,6 @@ __pypackages__/
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
-
-# Redis
-*.rdb
-*.aof
-*.pid
 
 # RabbitMQ
 mnesia/

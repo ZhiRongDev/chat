@@ -18,8 +18,6 @@ export interface UserResponse {
 }
 
 export interface LoginResponse {
-  access_token: string
-  token_type: string
   user: UserResponse
 }
 
@@ -53,9 +51,7 @@ export const userApi = {
    * Register a new user account
    */
   register: async (payload: RegisterPayload): Promise<MessageResponse> => {
-    console.log(payload);
     const response = await api.post<MessageResponse>('/user/register', payload)
-    console.log(response);
     return response.data
   },
 
@@ -88,6 +84,14 @@ export const userApi = {
    */
   verifyEmail: async (payload: VerifyEmailPayload): Promise<MessageResponse> => {
     const response = await api.post<MessageResponse>('/user/verify-email', payload)
+    return response.data
+  },
+
+  /**
+   * Logout - clears session cookie
+   */
+  logout: async (): Promise<MessageResponse> => {
+    const response = await api.post<MessageResponse>('/user/logout')
     return response.data
   },
 }

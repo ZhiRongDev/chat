@@ -14,20 +14,22 @@ from sqlmodel import Session
 
 from app.auth import get_current_user
 from app.model.user_model import User
-from app.model.document_model import Document, GeminiFileSearchStore
-from app.model import engine
+from app.model.document_model import Document
+import app.model
 from app.service.gemini_file_search_service import GeminiFileSearchService
+from app.service.document_sync_service import DocumentSyncService
 from app.config import settings
 
 
 # Routers
 nonauth_router = APIRouter(prefix="/documents", tags=["documents"])
-auth_router = APIRouter(prefix="/documents", tags=["documents"])
+auth_router = APIRouter(prefix="/documents", tags=["documents"], dependencies=[Depends(get_current_user)])
 
 
 # Request/Response Models
 class DocumentUploadResponse(BaseModel):
     """Response for document upload"""
+
     id: str  # Snowflake ID as string
     filename: str
     file_type: str
@@ -38,6 +40,7 @@ class DocumentUploadResponse(BaseModel):
 
 class TextIngestionRequest(BaseModel):
     """Request for ingesting text content"""
+
     title: str
     content: str
     metadata: Optional[dict] = None
@@ -45,12 +48,14 @@ class TextIngestionRequest(BaseModel):
 
 class URLIngestionRequest(BaseModel):
     """Request for ingesting content from URL"""
+
     url: HttpUrl
     metadata: Optional[dict] = None
 
 
 class DocumentListResponse(BaseModel):
     """Response for document list"""
+
     id: str
     filename: str
     file_type: str
@@ -63,6 +68,7 @@ class DocumentListResponse(BaseModel):
 
 class DocumentDetailResponse(BaseModel):
     """Response for document detail"""
+
     id: str
     filename: str
     file_type: str
@@ -79,6 +85,7 @@ class DocumentDetailResponse(BaseModel):
 
 class DocumentStatsResponse(BaseModel):
     """Response for document statistics"""
+
     total_documents: int
     total_size_bytes: int
     documents_by_type: dict
@@ -86,12 +93,14 @@ class DocumentStatsResponse(BaseModel):
 
 class StoreInfoResponse(BaseModel):
     """Response for File Search Store information"""
+
     id: str
     display_name: str
     description: Optional[str]
     document_count: int
     total_size_bytes: int
     created_at: int
+    api_key_identifier: str  # First 8 chars of API key hash for identification
 
 
 # ============================================================================
@@ -132,14 +141,17 @@ async def upload_document(
         )
 
     # Create temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix) as tmp_file:
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=Path(file.filename).suffix
+    ) as tmp_file:
         tmp_file.write(file_content)
         tmp_file_path = tmp_file.name
 
     try:
+        # Use server-configured API key
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
@@ -150,7 +162,7 @@ async def upload_document(
                 store_id=store.id,
                 filename=file.filename,
                 user_id=current_user.id,
-                metadata={"uploaded_by": str(current_user.id)}
+                metadata={"uploaded_by": str(current_user.id)},
             )
 
             return DocumentUploadResponse(
@@ -190,20 +202,23 @@ async def ingest_text(
     """
     # Create temporary file with text content
     filename = f"{request.title}.txt"
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp_file:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp_file:
         tmp_file.write(request.content)
         tmp_file_path = tmp_file.name
 
     try:
+        # Use server-configured API key
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
             # Upload to Gemini
             metadata = request.metadata or {}
-            metadata.update({"type": "text_ingestion", "uploaded_by": str(current_user.id)})
+            metadata.update(
+                {"type": "text_ingestion", "uploaded_by": str(current_user.id)}
+            )
 
             document = gemini_service.upload_file_to_store(
                 db=session,
@@ -211,7 +226,7 @@ async def ingest_text(
                 store_id=store.id,
                 filename=filename,
                 user_id=current_user.id,
-                metadata=metadata
+                metadata=metadata,
             )
 
             return DocumentUploadResponse(
@@ -259,7 +274,7 @@ async def ingest_url(
         filename = url_path.name or "downloaded_content.txt"
 
         # Create temporary file
-        suffix = url_path.suffix or '.txt'
+        suffix = url_path.suffix or ".txt"
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp_file:
             tmp_file.write(response.content)
             tmp_file_path = tmp_file.name
@@ -271,19 +286,22 @@ async def ingest_url(
         )
 
     try:
+        # Use server-configured API key
         gemini_service = GeminiFileSearchService()
 
-        with Session(engine) as session:
+        with Session(app.model.engine) as session:
             # Get or create user's file search store
             store = gemini_service.get_or_create_user_store(session, current_user.id)
 
             # Upload to Gemini
             metadata = request.metadata or {}
-            metadata.update({
-                "type": "url_ingestion",
-                "uploaded_by": str(current_user.id),
-                "source_url": str(request.url)
-            })
+            metadata.update(
+                {
+                    "type": "url_ingestion",
+                    "uploaded_by": str(current_user.id),
+                    "source_url": str(request.url),
+                }
+            )
 
             document = gemini_service.upload_file_to_store(
                 db=session,
@@ -292,7 +310,7 @@ async def ingest_url(
                 filename=filename,
                 user_id=current_user.id,
                 metadata=metadata,
-                source_url=str(request.url)
+                source_url=str(request.url),
             )
 
             return DocumentUploadResponse(
@@ -325,6 +343,7 @@ async def list_documents(
     current_user: User = Depends(get_current_user),
     limit: int = 100,
     offset: int = 0,
+    sync: bool = True,  # Enable auto-sync by default
 ):
     """
     List all documents for authenticated user
@@ -333,20 +352,53 @@ async def list_documents(
         current_user: Authenticated user
         limit: Maximum number of documents to return
         offset: Offset for pagination
+        sync: If True, automatically sync with Gemini before returning (default: True)
 
     Returns:
-        List of documents
+        List of user's documents
     """
-    # Don't require Gemini API key for listing documents (DB-only operation)
-    gemini_service = GeminiFileSearchService(require_api_key=False)
+    import logging
 
-    with Session(engine) as session:
+    logger = logging.getLogger(__name__)
+
+    # Use server-configured API key
+    gemini_service = GeminiFileSearchService()
+
+    logger.info(
+        f"list_documents: user_id={current_user.id}, api_key_hash={gemini_service.api_key_hash[:8] if gemini_service.api_key_hash else 'None'}, sync={sync}"
+    )
+
+    with Session(app.model.engine) as session:
+        # Get the user's store for the current API key
+        store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        logger.info(
+            f"  Found/created store: id={store.id}, store_name={store.store_name}, api_key_hash={store.api_key_hash[:8] if store.api_key_hash else 'None'}, is_active={store.is_active}, document_count={store.document_count}"
+        )
+
+        # Auto-sync with Gemini if requested
+        if sync and gemini_service.client:
+            try:
+                sync_service = DocumentSyncService(
+                    gemini_client=gemini_service.client,
+                    api_key_hash=gemini_service.api_key_hash
+                )
+                added, removed = sync_service.sync_store_documents(session, store)
+                if added > 0 or removed > 0:
+                    logger.info(f"  Auto-sync: {added} documents added, {removed} removed")
+            except Exception as e:
+                logger.error(f"  Auto-sync failed (continuing with database query): {e}")
+
+        # List documents from this specific store
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
+            store_id=store.id,
             limit=limit,
-            offset=offset
+            offset=offset,
         )
+
+        logger.info(f"  Retrieved {len(documents)} documents from database")
 
         return [
             DocumentListResponse(
@@ -386,7 +438,7 @@ async def get_document(
             detail="Invalid document_id format",
         )
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         document = session.get(Document, doc_id_int)
 
         if not document or document.user_id != current_user.id:
@@ -434,9 +486,10 @@ async def delete_document(
             detail="Invalid document_id format",
         )
 
+    # Use server-configured API key
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         # Verify ownership
         document = session.get(Document, doc_id_int)
 
@@ -446,12 +499,10 @@ async def delete_document(
                 detail="Document not found",
             )
 
-        # Delete document
+        # Delete document (deletes from both Gemini and database)
         try:
             deleted = gemini_service.delete_document(
-                db=session,
-                document_id=doc_id_int,
-                delete_from_gemini=True
+                db=session, document_id=doc_id_int, delete_from_gemini=True
             )
 
             if not deleted:
@@ -460,8 +511,14 @@ async def delete_document(
                     detail="Document not found",
                 )
 
-            return {"detail": "Document deleted successfully"}
+            return {"detail": "Document deleted successfully from Gemini and database"}
 
+        except RuntimeError as e:
+            # Gemini deletion failed - document remains in both places
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to delete document from Gemini File Search: {str(e)}. Document has not been deleted.",
+            )
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -482,13 +539,19 @@ async def get_document_stats(
     Returns:
         Document statistics
     """
+    # Use server-configured API key
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
+        # Get the user's store for the current API key
+        store = gemini_service.get_or_create_user_store(session, current_user.id)
+
+        # Get documents from this specific store
         documents = gemini_service.list_documents(
             db=session,
             user_id=current_user.id,
-            limit=10000  # Get all for stats
+            store_id=store.id,
+            limit=10000,  # Get all for stats
         )
 
         total_documents = len(documents)
@@ -524,9 +587,10 @@ async def get_user_store_info(
     Returns:
         Store information
     """
+    # Use server-configured API key
     gemini_service = GeminiFileSearchService()
 
-    with Session(engine) as session:
+    with Session(app.model.engine) as session:
         store = gemini_service.get_or_create_user_store(session, current_user.id)
 
         return StoreInfoResponse(
@@ -536,4 +600,7 @@ async def get_user_store_info(
             document_count=store.document_count,
             total_size_bytes=store.total_size_bytes,
             created_at=store.created_at,
+            api_key_identifier=(
+                store.api_key_hash[:8] if store.api_key_hash else "unknown"
+            ),
         )

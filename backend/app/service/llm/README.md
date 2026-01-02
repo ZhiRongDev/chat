@@ -15,11 +15,13 @@ This module provides a flexible, multi-provider LLM integration with LangGraph-b
 ### Components
 
 1. **LLM Factory** (`llm_factory.py`)
+
    - Creates LLM instances for different providers
    - Manages API key validation
    - Provides default models for each provider
 
 2. **Search Tools** (`search_tools.py`)
+
    - Integrates Google Search via Serper API
    - Integrates Tavily Search API
    - Automatic tool availability detection
@@ -73,13 +75,14 @@ DEFAULT_LLM_PROVIDER=gemini  # Options: gemini, openai, anthropic
 **POST** `/api/v1/chat/`
 
 Request body:
+
 ```json
 {
   "message": "What are the latest developments in AI?",
-  "provider": "gemini",           // Optional: gemini, openai, anthropic
-  "model": "gemini-2.0-flash-exp", // Optional: specific model name
-  "temperature": 0.7,              // Optional: 0.0 to 1.0
-  "use_search": true               // Optional: enable/disable search
+  "provider": "gemini", // Optional: gemini, openai, anthropic
+  "model": "gemini-2.5-flash-lite", // Optional: specific model name
+  "temperature": 0.7, // Optional: 0.0 to 1.0
+  "use_search": true // Optional: enable/disable search
 }
 ```
 
@@ -90,6 +93,7 @@ Response: Streaming text/plain
 **GET** `/api/v1/chat/status`
 
 Response:
+
 ```json
 {
   "available_providers": ["gemini", "openai"],
@@ -148,14 +152,14 @@ response = agent.invoke("What is 2+2?")
 ```typescript
 // TypeScript/JavaScript example
 async function sendMessage(message: string, provider?: string) {
-  const response = await fetch('/api/v1/chat/', {
-    method: 'POST',
+  const response = await fetch("/api/v1/chat/", {
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       message,
-      provider: provider || 'gemini',
+      provider: provider || "gemini",
       temperature: 0.7,
       use_search: true,
     }),
@@ -204,17 +208,18 @@ The agent uses a multi-node graph for intelligent processing:
 
 ## Default Models
 
-| Provider   | Default Model              | Notes                          |
-|-----------|----------------------------|--------------------------------|
-| Gemini    | gemini-2.0-flash-exp       | Fast, efficient, multimodal    |
-| OpenAI    | gpt-4o-mini                | Cost-effective, good quality   |
-| Anthropic | claude-3-5-sonnet-20241022 | High quality, large context    |
+| Provider  | Default Model              | Notes                        |
+| --------- | -------------------------- | ---------------------------- |
+| Gemini    | gemini-2.5-flash-lite      | Fast, efficient, multimodal  |
+| OpenAI    | gpt-4o-mini                | Cost-effective, good quality |
+| Anthropic | claude-3-5-sonnet-20241022 | High quality, large context  |
 
 ## Search Tools
 
 ### When Search is Triggered
 
 The agent automatically decides to use search when:
+
 - Query asks about recent events or news
 - Query requires current/real-time data
 - Query asks for specific facts that may be outdated
@@ -223,6 +228,7 @@ The agent automatically decides to use search when:
 ### Search Providers
 
 1. **Serper (Google Search)**
+
    - Returns top 5 Google search results
    - Best for general web search
    - Fast and reliable
@@ -237,7 +243,7 @@ The agent automatically decides to use search when:
 - **Streaming**: All responses stream by default for better UX
 - **Search Overhead**: Search adds 1-3 seconds but improves accuracy
 - **Model Selection**:
-  - Use "flash" models for speed (gemini-2.0-flash-exp)
+  - Use "flash" models for speed (gemini-2.5-flash-lite)
   - Use "pro" models for quality (gpt-4o, claude-3-5-sonnet)
 - **Temperature**:
   - Lower (0.1-0.3) for factual answers
@@ -271,19 +277,25 @@ curl http://localhost:5000/api/v1/chat/status
 ## Troubleshooting
 
 ### Issue: Provider not available
+
 **Solution**: Check that the corresponding API key is set in `.env`
 
 ### Issue: Search not working
+
 **Solution**: Verify `SERPER_API_KEY` or `TAVILY_API_KEY` is configured
 
 ### Issue: Slow responses
+
 **Solution**:
+
 - Disable search with `use_search: false`
-- Use faster models (gemini-2.0-flash-exp, gpt-4o-mini)
+- Use faster models (gemini-2.5-flash-lite, gpt-4o-mini)
 - Lower temperature
 
 ### Issue: Import errors
+
 **Solution**: Reinstall dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```

@@ -8,6 +8,7 @@ import os
 import hashlib
 import mimetypes
 import time
+import logging
 from typing import Optional
 from pathlib import Path
 
@@ -19,22 +20,33 @@ from app.config import settings
 from app.model.document_model import Document, GeminiFileSearchStore
 from app.utils import get_timestamp
 
+logger = logging.getLogger(__name__)
+
 
 class GeminiFileSearchService:
     """Service for managing Gemini File Search Stores and documents"""
 
-    def __init__(self, require_api_key: bool = True):
+    def __init__(self, api_key: Optional[str] = None, require_api_key: bool = True):
         """
         Initialize Gemini API client
 
         Args:
+            api_key: Optional API key to use (overrides settings.GEMINI_API_KEY)
             require_api_key: If True, raises error if API key not configured.
                            If False, allows initialization without API key (for DB-only operations)
         """
         self.client = None
+        self.api_key = None
+        self.api_key_hash = None
 
-        if settings.GEMINI_API_KEY:
-            self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        # Use provided API key first, then fall back to settings
+        effective_api_key = api_key or settings.GEMINI_API_KEY
+
+        if effective_api_key:
+            self.client = genai.Client(api_key=effective_api_key)
+            self.api_key = effective_api_key
+            # Hash the API key for database lookup (SHA-256)
+            self.api_key_hash = hashlib.sha256(effective_api_key.encode()).hexdigest()
         elif require_api_key:
             raise ValueError("GEMINI_API_KEY not configured")
 
@@ -59,7 +71,7 @@ class GeminiFileSearchService:
 
         Args:
             db: Database session
-            user_id: Owner user ID (None for global store)
+            user_id: Owner user ID (required - each user has their own store)
             display_name: Human-readable name for the store
             description: Optional description
 
@@ -67,6 +79,9 @@ class GeminiFileSearchService:
             GeminiFileSearchStore database record
         """
         self._ensure_client()
+
+        if not self.api_key_hash:
+            raise ValueError("API key hash not available. Cannot create store.")
 
         # Create store in Gemini API
         file_search_store = self.client.file_search_stores.create(
@@ -76,6 +91,7 @@ class GeminiFileSearchService:
         # Save to database
         db_store = GeminiFileSearchStore(
             user_id=user_id,
+            api_key_hash=self.api_key_hash,
             store_name=file_search_store.name,
             display_name=display_name,
             description=description,
@@ -96,15 +112,53 @@ class GeminiFileSearchService:
     ) -> GeminiFileSearchStore:
         """
         Get existing store for user or create new one
+        Each user can have multiple stores, one per API key they use.
+
+        IMPORTANT: When switching API keys:
+        - Stores created with different API keys are marked inactive
+        - When switching back to a previous API key, the old store is reactivated
+        - This allows users to switch between API keys without losing documents
 
         Args:
             db: Database session
             user_id: User ID
 
         Returns:
-            GeminiFileSearchStore for the user
+            GeminiFileSearchStore for the user accessible with current API key
         """
-        # Check if user already has a store
+        if not self.api_key_hash:
+            raise ValueError("API key hash not available. Cannot get or create store.")
+
+        # First, check if there's an inactive store with matching API key hash
+        # This handles the case where user switches back to a previously used API key
+        inactive_statement = select(GeminiFileSearchStore).where(
+            GeminiFileSearchStore.user_id == user_id,
+            GeminiFileSearchStore.api_key_hash == self.api_key_hash,
+            GeminiFileSearchStore.is_active == False
+        )
+        inactive_store = db.exec(inactive_statement).first()
+
+        if inactive_store:
+            logger.info(
+                f"Reactivating inactive store {inactive_store.store_name} for user {user_id} "
+                f"with matching API key hash"
+            )
+            # Deactivate any currently active stores for this user
+            active_statement = select(GeminiFileSearchStore).where(
+                GeminiFileSearchStore.user_id == user_id,
+                GeminiFileSearchStore.is_active == True
+            )
+            active_stores = db.exec(active_statement).all()
+            for active_store in active_stores:
+                active_store.is_active = False
+
+            # Reactivate the store with matching API key
+            inactive_store.is_active = True
+            db.commit()
+            db.refresh(inactive_store)
+            return inactive_store
+
+        # Check if user already has an active store
         statement = select(GeminiFileSearchStore).where(
             GeminiFileSearchStore.user_id == user_id,
             GeminiFileSearchStore.is_active == True
@@ -112,9 +166,32 @@ class GeminiFileSearchService:
         store = db.exec(statement).first()
 
         if store:
+            # Refresh to ensure we have the latest data from database
+            db.refresh(store)
+
+            # Verify the store is accessible with the current API key
+            # If API key hash doesn't match, this store was created with a different key
+            if store.api_key_hash != self.api_key_hash:
+                logger.warning(
+                    f"User {user_id} has existing store {store.store_name} created with different API key. "
+                    f"Marking as inactive and creating new store with current API key."
+                )
+                # Mark old store as inactive (we can't access it with current API key anyway)
+                store.is_active = False
+                db.commit()
+
+                # Create new store with current API key
+                return self.create_file_search_store(
+                    db=db,
+                    user_id=user_id,
+                    display_name=f"User {user_id} Document Store",
+                    description=f"Personal document store for user {user_id}"
+                )
+
+            # Store exists and API key matches - return it
             return store
 
-        # Create new store for user
+        # No store exists - create new one
         return self.create_file_search_store(
             db=db,
             user_id=user_id,
@@ -122,36 +199,6 @@ class GeminiFileSearchService:
             description=f"Personal document store for user {user_id}"
         )
 
-    def get_or_create_global_store(
-        self,
-        db: Session
-    ) -> GeminiFileSearchStore:
-        """
-        Get existing global store (for non-authenticated users) or create new one
-
-        Args:
-            db: Database session
-
-        Returns:
-            GeminiFileSearchStore global store (user_id = None)
-        """
-        # Check if global store already exists
-        statement = select(GeminiFileSearchStore).where(
-            GeminiFileSearchStore.user_id == None,
-            GeminiFileSearchStore.is_active == True
-        )
-        store = db.exec(statement).first()
-
-        if store:
-            return store
-
-        # Create new global store
-        return self.create_file_search_store(
-            db=db,
-            user_id=None,
-            display_name="Global Document Store",
-            description="Shared document store for all users"
-        )
 
     def list_stores(self, db: Session, user_id: Optional[int] = None) -> list[GeminiFileSearchStore]:
         """
@@ -198,7 +245,7 @@ class GeminiFileSearchService:
                     config={'force': True}
                 )
             except Exception as e:
-                print(f"Error deleting Gemini store: {e}")
+                logger.error(f"Error deleting Gemini store: {e}")
 
         # Mark as inactive in database
         store.is_active = False
@@ -353,25 +400,45 @@ class GeminiFileSearchService:
         """
         Delete a document from database and optionally from Gemini
 
+        This method ensures consistency by:
+        1. Deleting from Gemini first
+        2. Only deleting from database if Gemini delete succeeds (or if delete_from_gemini=False)
+        3. Relying on auto-sync to recover if database operation fails
+
         Args:
             db: Database session
             document_id: Document database ID
-            delete_from_gemini: If True, also delete from Gemini API
+            delete_from_gemini: If True, also delete from Gemini API (default: True)
 
         Returns:
             True if successful
+
+        Raises:
+            RuntimeError: If Gemini deletion fails (to prevent database deletion)
         """
         document = db.get(Document, document_id)
         if not document:
             return False
 
-        # Delete from Gemini API if requested
+        # Delete from Gemini API first (if requested)
         if delete_from_gemini and document.gemini_file_id:
             try:
                 self._ensure_client()
-                self.client.files.delete(name=document.gemini_file_id)
+                # Use file_search_stores.documents.delete for documents in a store
+                # The document ID format is: fileSearchStores/{store_id}/documents/{doc_id}
+                # Use force=True to delete document and all related chunks
+                from google.genai.types import DeleteDocumentConfig
+                self.client.file_search_stores.documents.delete(
+                    name=document.gemini_file_id,
+                    config=DeleteDocumentConfig(force=True)
+                )
+                logger.info(f"Successfully deleted document {document.gemini_file_id} from Gemini File Search Store")
             except Exception as e:
-                print(f"Error deleting from Gemini: {e}")
+                error_msg = f"Failed to delete document from Gemini: {e}"
+                logger.error(error_msg)
+                # Raise exception to prevent database deletion
+                # This maintains consistency - if we can't delete from Gemini, don't delete from DB
+                raise RuntimeError(error_msg)
 
         # Update store statistics
         if document.gemini_store_id:
@@ -384,10 +451,11 @@ class GeminiFileSearchService:
                 store.total_size_bytes = max(0, store.total_size_bytes - document.file_size)
                 store.updated_at = get_timestamp()
 
-        # Delete from database
+        # Delete from database (only reached if Gemini delete succeeded or wasn't requested)
         db.delete(document)
         db.commit()
 
+        logger.info(f"Successfully deleted document {document_id} from database")
         return True
 
     def list_documents(

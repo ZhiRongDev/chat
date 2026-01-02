@@ -37,12 +37,8 @@
       </div>
 
       <div v-else class="document-items">
-        <div
-          v-for="doc in documents"
-          :key="doc.id"
-          class="document-item"
-          :class="{ 'processing': doc.status === 'processing' }"
-        >
+        <div v-for="doc in documents" :key="doc.id" class="document-item"
+          :class="{ 'processing': doc.status === 'processing' }">
           <div class="document-icon">
             <i :class="getDocumentIcon(doc.content_type)"></i>
           </div>
@@ -61,17 +57,11 @@
             </div>
           </div>
           <div class="document-actions">
-            <button
-              class="btn btn-sm btn-outline-primary"
-              @click="viewDocument(doc)"
-              :disabled="doc.status !== 'completed'"
-            >
+            <button class="btn btn-sm btn-outline-primary" @click="viewDocument(doc)"
+              :disabled="doc.status !== 'completed'">
               <i class="bi bi-eye"></i>
             </button>
-            <button
-              class="btn btn-sm btn-outline-danger"
-              @click="deleteDocument(doc)"
-            >
+            <button class="btn btn-sm btn-outline-danger" @click="deleteDocument(doc)">
               <i class="bi bi-trash"></i>
             </button>
           </div>
@@ -88,22 +78,13 @@
         </div>
         <div class="modal-body">
           <div class="upload-tabs">
-            <button
-              :class="{ active: uploadTab === 'file' }"
-              @click="uploadTab = 'file'"
-            >
+            <button :class="{ active: uploadTab === 'file' }" @click="uploadTab = 'file'">
               File Upload
             </button>
-            <button
-              :class="{ active: uploadTab === 'text' }"
-              @click="uploadTab = 'text'"
-            >
+            <button :class="{ active: uploadTab === 'text' }" @click="uploadTab = 'text'">
               Text Input
             </button>
-            <button
-              :class="{ active: uploadTab === 'url' }"
-              @click="uploadTab = 'url'"
-            >
+            <button :class="{ active: uploadTab === 'url' }" @click="uploadTab = 'url'">
               From URL
             </button>
           </div>
@@ -111,16 +92,11 @@
           <!-- File Upload Tab -->
           <div v-if="uploadTab === 'file'" class="upload-section">
             <div class="file-drop-zone" @drop.prevent="handleFileDrop" @dragover.prevent>
-              <input
-                type="file"
-                ref="fileInput"
-                @change="handleFileSelect"
-                accept=".pdf,.txt,.md"
-                style="display: none"
-              />
+              <input type="file" ref="fileInput" @change="handleFileSelect" accept=".pdf,.txt,.md"
+                style="display: none" />
               <i class="bi bi-cloud-upload"></i>
               <p>Drag and drop a file here, or</p>
-              <button class="btn btn-outline-primary" @click="$refs.fileInput.click()">
+              <button class="btn btn-outline-primary" @click="fileInput?.click()">
                 Choose File
               </button>
               <small class="text-muted">Supported: PDF, TXT, MD (Max 10MB)</small>
@@ -138,21 +114,12 @@
           <div v-if="uploadTab === 'text'" class="upload-section">
             <div class="mb-3">
               <label class="form-label">Title</label>
-              <input
-                v-model="textTitle"
-                type="text"
-                class="form-control"
-                placeholder="Enter document title"
-              />
+              <input v-model="textTitle" type="text" class="form-control" placeholder="Enter document title" />
             </div>
             <div class="mb-3">
               <label class="form-label">Content</label>
-              <textarea
-                v-model="textContent"
-                class="form-control"
-                rows="10"
-                placeholder="Paste or type your content here..."
-              ></textarea>
+              <textarea v-model="textContent" class="form-control" rows="10"
+                placeholder="Paste or type your content here..."></textarea>
             </div>
           </div>
 
@@ -160,21 +127,11 @@
           <div v-if="uploadTab === 'url'" class="upload-section">
             <div class="mb-3">
               <label class="form-label">URL</label>
-              <input
-                v-model="urlInput"
-                type="url"
-                class="form-control"
-                placeholder="https://example.com/article"
-              />
+              <input v-model="urlInput" type="url" class="form-control" placeholder="https://example.com/article" />
             </div>
             <div class="mb-3">
               <label class="form-label">Title (optional)</label>
-              <input
-                v-model="urlTitle"
-                type="text"
-                class="form-control"
-                placeholder="Auto-detected from page"
-              />
+              <input v-model="urlTitle" type="text" class="form-control" placeholder="Auto-detected from page" />
             </div>
           </div>
 
@@ -190,11 +147,7 @@
           <button class="btn btn-secondary" @click="closeUploadModal" :disabled="uploading">
             Cancel
           </button>
-          <button
-            class="btn btn-primary"
-            @click="handleUpload"
-            :disabled="!canUpload || uploading"
-          >
+          <button class="btn btn-primary" @click="handleUpload" :disabled="!canUpload || uploading">
             <span v-if="uploading">Uploading...</span>
             <span v-else>Upload</span>
           </button>
@@ -231,18 +184,9 @@
             </div>
           </div>
 
-          <h5 class="mt-4">Content Chunks</h5>
-          <div class="chunks-list">
-            <div
-              v-for="chunk in documentChunks"
-              :key="chunk.id"
-              class="chunk-item"
-            >
-              <div class="chunk-header">
-                <span class="badge bg-secondary">Chunk {{ chunk.chunk_index }}</span>
-              </div>
-              <div class="chunk-content">{{ chunk.content }}</div>
-            </div>
+          <div class="info-message">
+            <i class="bi bi-info-circle"></i>
+            <p>Document content is managed by Gemini File Search. Chunks are processed and indexed automatically.</p>
           </div>
         </div>
       </div>
@@ -252,7 +196,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { documentsApi, type Document, type DocumentDetail, type DocumentChunk, type DocumentStats } from '@/api/documents'
+import { documentsApi, type Document, type DocumentDetail, type DocumentStats } from '@/api/documents'
+import { appendAlert } from '@/utils/alert';
+
+const props = defineProps<{
+  geminiApiKey?: string
+}>()
 
 const documents = ref<Document[]>([])
 const stats = ref<DocumentStats | null>(null)
@@ -260,13 +209,13 @@ const loading = ref(false)
 const showUploadModal = ref(false)
 const showDetailModal = ref(false)
 const selectedDocument = ref<DocumentDetail | null>(null)
-const documentChunks = ref<DocumentChunk[]>([])
 const uploading = ref(false)
 const uploadError = ref('')
 
 // Upload form state
 const uploadTab = ref<'file' | 'text' | 'url'>('file')
 const selectedFile = ref<File | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 const textTitle = ref('')
 const textContent = ref('')
 const urlInput = ref('')
@@ -321,18 +270,20 @@ const handleUpload = async () => {
   uploading.value = true
 
   try {
+    const options = props.geminiApiKey ? { geminiApiKey: props.geminiApiKey } : undefined
+
     if (uploadTab.value === 'file' && selectedFile.value) {
-      await documentsApi.uploadDocument(selectedFile.value)
+      await documentsApi.uploadDocument(selectedFile.value, options)
     } else if (uploadTab.value === 'text') {
       await documentsApi.ingestText({
         title: textTitle.value,
         content: textContent.value,
-      })
+      }, options)
     } else if (uploadTab.value === 'url') {
       await documentsApi.ingestUrl({
         url: urlInput.value,
         title: urlTitle.value || undefined,
-      })
+      }, options)
     }
 
     closeUploadModal()
@@ -349,11 +300,10 @@ const handleUpload = async () => {
 const viewDocument = async (doc: Document) => {
   try {
     selectedDocument.value = await documentsApi.getDocumentDetail(doc.id)
-    documentChunks.value = selectedDocument.value.chunks
     showDetailModal.value = true
   } catch (error: any) {
     console.error('Failed to load document details:', error)
-    alert('Failed to load document details')
+    appendAlert('Failed to load document details', 'danger')
   }
 }
 
@@ -361,12 +311,13 @@ const deleteDocument = async (doc: Document) => {
   if (!confirm(`Are you sure you want to delete "${doc.title}"?`)) return
 
   try {
-    await documentsApi.deleteDocument(doc.id)
+    const options = props.geminiApiKey ? { geminiApiKey: props.geminiApiKey } : undefined
+    await documentsApi.deleteDocument(doc.id, options)
     await loadDocuments()
     await loadStats()
   } catch (error: any) {
     console.error('Failed to delete document:', error)
-    alert('Failed to delete document')
+    appendAlert('Failed to delete document', 'danger')
   }
 }
 
@@ -384,7 +335,6 @@ const closeUploadModal = () => {
 const closeDetailModal = () => {
   showDetailModal.value = false
   selectedDocument.value = null
-  documentChunks.value = []
 }
 
 const getDocumentIcon = (contentType: string): string => {
@@ -657,25 +607,23 @@ const formatDate = (timestamp: number): string => {
   border-bottom: none;
 }
 
-.chunks-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.chunk-item {
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   padding: 1rem;
   background: var(--bs-light);
   border-radius: 4px;
-  margin-bottom: 0.75rem;
+  margin-top: 1rem;
 }
 
-.chunk-header {
-  margin-bottom: 0.5rem;
+.info-message i {
+  font-size: 1.5rem;
+  color: var(--bs-info);
 }
 
-.chunk-content {
-  white-space: pre-wrap;
-  font-size: 0.875rem;
-  line-height: 1.5;
+.info-message p {
+  margin: 0;
+  color: var(--bs-secondary);
 }
 </style>

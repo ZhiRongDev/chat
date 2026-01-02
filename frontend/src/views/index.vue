@@ -1,16 +1,8 @@
 <template>
   <div class="app-container">
     <!-- Sidebar -->
-    <Sidebar
-      :is-open="sidebarOpen"
-      :chat-histories="chatHistories"
-      :current-chat-id="currentChatId"
-      @new-chat="newChat"
-      @load-chat="loadChat"
-      @delete-chat="deleteChat"
-      @logout="handleLogout"
-      @show-modal="showModal"
-    />
+    <Sidebar :is-open="sidebarOpen" :chat-histories="chatHistories" :current-chat-id="currentChatId" @new-chat="newChat"
+      @load-chat="loadChat" @delete-chat="deleteChat" @logout="handleLogout" @show-modal="showModal" />
 
     <!-- Main Chat Area -->
     <div class="main-container">
@@ -18,12 +10,7 @@
       <div class="header">
         <button class="menu-btn" @click="toggleSidebar">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 6h16M4 12h16M4 18h16"
-            ></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
         </button>
         <div class="header-title">Chat</div>
@@ -31,71 +18,64 @@
       </div>
 
       <!-- Messages -->
-      <div class="messages-container">
+      <div class="messages-container" ref="messagesContainer">
         <div class="messages-wrapper">
-          <div
-            v-for="(msg, index) in messages"
-            :key="msg.id || index"
-            class="message-group"
-            :class="msg.sender"
-          >
-            <div class="message-bubble">
+          <div v-for="(msg, index) in messages" :key="msg.id || index" class="message-group" :class="msg.sender">
+            <div class="message-bubble" :class="{ thinking: msg.sender === 'bot' && msg.id === streamingMessageId }">
               <MarkdownRenderer v-if="msg.sender === 'bot'" :content="msg.text" />
               <span v-else>{{ msg.text }}</span>
-            </div>
-          </div>
-
-          <div v-if="loading" class="message-group bot">
-            <div class="typing-indicator">
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
-              <div class="typing-dot"></div>
+              <!-- Animated dots for thinking state -->
+              <span v-if="msg.sender === 'bot' && msg.id === streamingMessageId && !msg.text" class="thinking-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
             </div>
           </div>
 
           <div ref="endOfMessages"></div>
         </div>
+
+        <!-- Scroll to Bottom Button -->
+        <button v-show="showScrollButton" @click="scrollToBottom" class="scroll-to-bottom-btn"
+          aria-label="Scroll to bottom">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+          </svg>
+        </button>
       </div>
 
       <!-- Input -->
       <div class="input-area">
-        <div v-if="chatSettings.useRag" class="rag-indicator">
-          <svg
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            style="width: 16px; height: 16px"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-            ></path>
+        <div v-if="chatSettings.useRag && !ragWarning" class="rag-indicator">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4">
+            </path>
           </svg>
           Gemini File Search RAG Active
         </div>
+        <div v-if="ragWarning" class="rag-warning">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+            </path>
+          </svg>
+          RAG enabled but no documents found. Upload documents in Settings.
+        </div>
         <div class="input-wrapper">
-          <input
-            v-model="currentMessage"
-            @keypress.enter="sendMessage"
-            type="text"
-            class="input-field"
-            placeholder="Message ChatGPT..."
-            :disabled="loading"
-          />
-          <button
-            @click="sendMessage"
-            class="send-btn"
-            :disabled="!currentMessage.trim() || loading"
-          >
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              ></path>
+          <input v-model="currentMessage" @keypress.enter="sendMessage" type="text" class="input-field"
+            placeholder="Message Chat..." :disabled="loading" />
+          <button @click="loading ? stopMessage() : sendMessage()" class="send-btn" :class="{ 'stop-btn': loading }"
+            :disabled="!loading && !currentMessage.trim()">
+            <!-- Stop icon when loading -->
+            <svg v-if="loading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            <!-- Send icon when not loading -->
+            <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
             </svg>
           </button>
         </div>
@@ -103,18 +83,9 @@
     </div>
 
     <!-- Bootstrap Modal -->
-    <div
-      class="modal fade"
-      id="appModal"
-      tabindex="-1"
-      aria-labelledby="appModalLabel"
-      aria-hidden="true"
-      data-bs-keyboard="false"
-    >
-      <div
-        class="modal-dialog modal-dialog-centered"
-        :class="{ 'modal-lg': modalType === 'documents' }"
-      >
+    <div class="modal fade" id="appModal" tabindex="-1" aria-labelledby="appModalLabel" aria-hidden="true"
+      data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered" :class="{ 'modal-lg': modalType === 'documents' }">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="appModalLabel">{{ modalTitle }}</h5>
@@ -130,69 +101,37 @@
               <form @submit.prevent="handleLogin">
                 <div class="mb-3">
                   <label for="login-username" class="form-label">Username</label>
-                  <input
-                    v-model="loginForm.username"
-                    type="text"
-                    class="form-control"
-                    id="login-username"
-                    placeholder="Enter your username"
-                    required
-                    :disabled="formLoading"
-                  />
+                  <input v-model="loginUsername" type="text" class="form-control" id="login-username"
+                    placeholder="Enter your username" :disabled="formLoading" />
+                  <div v-if="loginErrors.username" class="invalid-feedback d-block">
+                    {{ loginErrors.username }}
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="login-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="loginForm.password"
-                      :type="showLoginPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="login-password"
-                      placeholder="Enter your password"
-                      required
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showLoginPassword = !showLoginPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showLoginPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="loginPassword" :type="showLoginPassword ? 'text' : 'password'" class="form-control"
+                      id="login-password" placeholder="Enter your password" :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn" @click="showLoginPassword = !showLoginPassword"
+                      :disabled="formLoading">
+                      <svg v-if="!showLoginPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
+                  </div>
+                  <div v-if="loginErrors.password" class="invalid-feedback d-block">
+                    {{ loginErrors.password }}
                   </div>
                 </div>
                 <div class="mb-3 text-end">
@@ -201,21 +140,12 @@
                   </a>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Logging in...' : 'Login' }}
                   </button>
                 </div>
@@ -235,142 +165,75 @@
               <form @submit.prevent="handleRegister">
                 <div class="mb-3">
                   <label for="register-username" class="form-label">Username</label>
-                  <input
-                    v-model="registerForm.username"
-                    type="text"
-                    class="form-control"
-                    id="register-username"
-                    placeholder="Enter your username"
-                    required
-                    :disabled="formLoading"
-                  />
+                  <input v-model="registerUsername" type="text" class="form-control" id="register-username"
+                    placeholder="Enter your username" :disabled="formLoading" />
+                  <div v-if="registerErrors.username" class="invalid-feedback d-block">
+                    {{ registerErrors.username }}
+                  </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-password" class="form-label">Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="registerForm.password"
-                      :type="showRegisterPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="register-password"
-                      placeholder="Enter your password"
-                      required
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showRegisterPassword = !showRegisterPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showRegisterPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="registerPassword" :type="showRegisterPassword ? 'text' : 'password'"
+                      class="form-control" id="register-password" placeholder="Enter your password"
+                      :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn"
+                      @click="showRegisterPassword = !showRegisterPassword" :disabled="formLoading">
+                      <svg v-if="!showRegisterPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
+                  </div>
+                  <div v-if="registerErrors.password" class="invalid-feedback d-block">
+                    {{ registerErrors.password }}
                   </div>
                 </div>
                 <div class="mb-3">
                   <label for="register-confirm" class="form-label">Confirm Password</label>
                   <div class="password-input-wrapper">
-                    <input
-                      v-model="registerForm.confirmPassword"
-                      :type="showRegisterConfirmPassword ? 'text' : 'password'"
-                      class="form-control"
-                      id="register-confirm"
-                      placeholder="Confirm your password"
-                      required
-                      :disabled="formLoading"
-                    />
-                    <button
-                      type="button"
-                      class="password-toggle-btn"
-                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword"
-                      :disabled="formLoading"
-                    >
-                      <svg
-                        v-if="!showRegisterConfirmPassword"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                        ></path>
+                    <input v-model="registerConfirmPassword" :type="showRegisterConfirmPassword ? 'text' : 'password'"
+                      class="form-control" id="register-confirm" placeholder="Confirm your password"
+                      :disabled="formLoading" />
+                    <button type="button" class="password-toggle-btn"
+                      @click="showRegisterConfirmPassword = !showRegisterConfirmPassword" :disabled="formLoading">
+                      <svg v-if="!showRegisterConfirmPassword" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21">
+                        </path>
                       </svg>
-                      <svg
-                        v-else
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        style="width: 20px; height: 20px"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        ></path>
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        ></path>
+                      <svg v-else fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        style="width: 20px; height: 20px">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
                       </svg>
                     </button>
                   </div>
+                  <div v-if="registerErrors.confirmPassword" class="invalid-feedback d-block">
+                    {{ registerErrors.confirmPassword }}
+                  </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Registering...' : 'Register' }}
                   </button>
                 </div>
@@ -390,35 +253,22 @@
               <form @submit.prevent="handleForgotPassword">
                 <div class="mb-3">
                   <label for="forgot-username" class="form-label">Username (Email)</label>
-                  <input
-                    v-model="forgotPasswordForm.username"
-                    type="text"
-                    class="form-control mb-2"
-                    id="forgot-username"
-                    placeholder="Enter your username/email"
-                    required
-                    :disabled="formLoading"
-                  />
+                  <input v-model="forgotPasswordUsername" type="text" class="form-control mb-2" id="forgot-username"
+                    placeholder="Enter your username/email" :disabled="formLoading" />
+                  <div v-if="forgotPasswordErrors.username" class="invalid-feedback d-block">
+                    {{ forgotPasswordErrors.username }}
+                  </div>
                   <div class="form-text">
                     We'll send a password reset link to your email address.
                   </div>
                 </div>
                 <div class="modal-footer border-0 px-0 pb-0">
-                  <button
-                    type="button"
-                    class="btn btn-secondary"
-                    @click="closeModal"
-                    :disabled="formLoading"
-                  >
+                  <button type="button" class="btn btn-secondary" @click="closeModal" :disabled="formLoading">
                     Cancel
                   </button>
                   <button type="submit" class="btn btn-primary" :disabled="formLoading">
-                    <span
-                      v-if="formLoading"
-                      class="spinner-border spinner-border-sm me-2"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
+                    <span v-if="formLoading" class="spinner-border spinner-border-sm me-2" role="status"
+                      aria-hidden="true"></span>
                     {{ formLoading ? 'Sending...' : 'Send Reset Link' }}
                   </button>
                 </div>
@@ -457,6 +307,8 @@ import MarkdownRenderer from '@/components/MarkdownRenderer.vue'
 import { appendAlert } from '@/utils/alert'
 import { Modal } from 'bootstrap'
 import { useRoute, useRouter } from 'vue-router'
+import { useForm, useField } from 'vee-validate'
+import { loginSchema, registerSchema, forgotPasswordSchema } from '@/utils/validation'
 
 const userStore = useUserStore()
 const route = useRoute()
@@ -480,12 +332,6 @@ const loadChatSettings = (): ChatSettingsType => {
   return {
     useRag: false,
     maxOutputTokens: 2048,
-    provider: '',
-    model: '',
-    temperature: 0.7,
-    geminiApiKey: '',
-    openaiApiKey: '',
-    anthropicApiKey: '',
   }
 }
 
@@ -506,8 +352,9 @@ const messages = ref<Message[]>([
 ])
 const currentMessage = ref('')
 const loading = ref(false)
-const sidebarOpen = ref(true)
+const sidebarOpen = ref(window.innerWidth >= 768)
 const endOfMessages = ref<HTMLElement | null>(null)
+const messagesContainer = ref<HTMLElement | null>(null)
 const modalType = ref('')
 const modalTitle = ref('')
 const chatHistories = ref<ChatHistoryItem[]>([])
@@ -515,27 +362,60 @@ const currentChatId = ref<string | null>(null)
 const formLoading = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const streamingMessageId = ref<string | null>(null) // Track which message is currently streaming
+const showScrollButton = ref(false) // Show/hide scroll to bottom button
+const ragWarning = ref(false) // Warning when RAG is enabled but no documents found
 let msgIdCounter = 2 // Temporary local counter for new messages (will be replaced with backend IDs)
+let abortController: AbortController | null = null // Controller to abort ongoing requests
 
-const loginForm = ref({
-  username: '',
-  password: '',
+// Login form validation
+const {
+  handleSubmit: handleLoginSubmit,
+  errors: loginErrors,
+  resetForm: resetLoginForm,
+} = useForm({
+  validationSchema: loginSchema,
 })
+const { value: loginUsername } = useField<string>('username')
+const { value: loginPassword } = useField<string>('password')
 
-const registerForm = ref({
-  username: '',
-  password: '',
-  confirmPassword: '',
+// Register form validation
+const {
+  handleSubmit: handleRegisterSubmit,
+  errors: registerErrors,
+  resetForm: resetRegisterForm,
+} = useForm({
+  validationSchema: registerSchema,
 })
+const { value: registerUsername } = useField<string>('username')
+const { value: registerPassword } = useField<string>('password')
+const { value: registerConfirmPassword } = useField<string>('confirmPassword')
 
-const forgotPasswordForm = ref({
-  username: '',
+// Forgot password form validation
+const {
+  handleSubmit: handleForgotPasswordSubmit,
+  errors: forgotPasswordErrors,
+  resetForm: resetForgotPasswordForm,
+} = useForm({
+  validationSchema: forgotPasswordSchema,
 })
+const { value: forgotPasswordUsername } = useField<string>('username')
 
 // Password visibility toggles
 const showLoginPassword = ref(false)
 const showRegisterPassword = ref(false)
 const showRegisterConfirmPassword = ref(false)
+
+// Check if user is near bottom of messages container
+const checkScrollPosition = () => {
+  if (!messagesContainer.value) return
+
+  const { scrollTop, scrollHeight, clientHeight } = messagesContainer.value
+  const threshold = 100 // Show button if more than 100px from bottom
+  const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold
+
+  showScrollButton.value = !isNearBottom
+}
 
 // Load chat histories on mount (only if logged in)
 onMounted(async () => {
@@ -544,6 +424,11 @@ onMounted(async () => {
     const modalElement = document.getElementById('appModal')
     if (modalElement) {
       bootstrapModal = new Modal(modalElement)
+    }
+
+    // Add scroll listener to messages container
+    if (messagesContainer.value) {
+      messagesContainer.value.addEventListener('scroll', checkScrollPosition)
     }
 
     // Check if we have reset token in URL query params
@@ -577,12 +462,24 @@ onUnmounted(() => {
   if (bootstrapModal) {
     bootstrapModal.dispose()
   }
+  // Remove scroll listener
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', checkScrollPosition)
+  }
 })
 
 const scrollToBottom = async () => {
   await nextTick()
   if (endOfMessages.value) {
     endOfMessages.value.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
+const stopMessage = () => {
+  if (abortController) {
+    abortController.abort()
+    abortController = null
+    loading.value = false
   }
 }
 
@@ -599,10 +496,15 @@ const sendMessage = async () => {
 
   currentMessage.value = ''
   loading.value = true
+
+  // Create new AbortController for this request
+  abortController = new AbortController()
+
   await scrollToBottom()
 
   // Create a new bot message that will be updated with streaming response
   const botMessageId = String(msgIdCounter++)
+  streamingMessageId.value = botMessageId // Set streaming message ID for thinking animation
   messages.value.push({
     id: botMessageId,
     text: '',
@@ -634,48 +536,21 @@ const sendMessage = async () => {
       }
     }
 
-    // Add LLM provider settings if specified
-    if (chatSettings.value.provider) {
-      payload.provider = chatSettings.value.provider
-    }
-    if (chatSettings.value.model) {
-      payload.model = chatSettings.value.model
-    }
-    if (chatSettings.value.temperature !== 0.7) {
-      payload.temperature = chatSettings.value.temperature
-    }
-
-    // Add API keys if provided
-    if (chatSettings.value.geminiApiKey) {
-      payload.gemini_api_key = chatSettings.value.geminiApiKey
-    }
-    if (chatSettings.value.openaiApiKey) {
-      payload.openai_api_key = chatSettings.value.openaiApiKey
-    }
-    if (chatSettings.value.anthropicApiKey) {
-      payload.anthropic_api_key = chatSettings.value.anthropicApiKey
-    }
-
-    // Build headers
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-    }
-
-    // Add authorization token if user is logged in (for personal RAG store)
-    const token = localStorage.getItem('token')
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
-    }
-
-    const res = await fetch('http://localhost:5000/api/v1/chat', {
+    // use /chat/ but not /chat to prevent HTTP & HTTPS mixup errors (Dont know why this is needed) 
+    const res = await fetch(`${import.meta.env.VITE_API_URL}/chat/`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(payload),
+      signal: abortController.signal,
+      credentials: 'include', // Send cookies for authentication
     })
 
     // Ensure the response body is available and the request was successful
     if (!res.ok) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       // Try to parse error message from response
       let errorMessage = 'Sorry, there was an error processing your request.'
       try {
@@ -702,6 +577,7 @@ const sendMessage = async () => {
 
     if (!res.body) {
       loading.value = false
+      streamingMessageId.value = null // Clear streaming message ID
       console.error('Response body is null')
       const botMessage = messages.value.find((msg) => msg.id === botMessageId)
       if (botMessage) {
@@ -726,9 +602,6 @@ const sendMessage = async () => {
       if (botMessage) {
         botMessage.text += chunk
       }
-
-      await nextTick()
-      await scrollToBottom()
     }
 
     // Final decoding step in case of partial characters at the end
@@ -739,22 +612,37 @@ const sendMessage = async () => {
     }
 
     loading.value = false
+    streamingMessageId.value = null // Clear streaming message ID
     await scrollToBottom()
 
     // Save chat after successful message exchange
     await saveCurrentChat()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending message:', error)
     loading.value = false
-    // Update bot message with error
-    const botMessage = messages.value.find((msg) => msg.id === botMessageId)
-    if (botMessage) {
-      botMessage.text = 'Sorry, there was an error connecting to the server.'
+    streamingMessageId.value = null // Clear streaming message ID
+
+    // Check if the request was aborted by user
+    if (error.name === 'AbortError') {
+      // Update bot message to indicate request was cancelled
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = botMessage.text || 'Request cancelled.'
+      }
+    } else {
+      // Update bot message with error
+      const botMessage = messages.value.find((msg) => msg.id === botMessageId)
+      if (botMessage) {
+        botMessage.text = 'Sorry, there was an error connecting to the server.'
+      }
     }
     await scrollToBottom()
 
     // Save chat even on error
     await saveCurrentChat()
+  } finally {
+    // Clean up abort controller
+    abortController = null
   }
 }
 
@@ -773,17 +661,13 @@ const loadChatHistories = async () => {
 
 const saveCurrentChat = async () => {
   try {
-    console.log('saveCurrentChat called, messages count:', messages.value.length)
-
     // Only save if logged in
     if (!isLoggedIn.value) {
-      console.log('Skipping save - user not logged in')
       return
     }
 
     // Only save if there are messages beyond the initial greeting
     if (messages.value.length <= 1) {
-      console.log('Skipping save - not enough messages')
       return
     }
 
@@ -792,7 +676,7 @@ const saveCurrentChat = async () => {
     const title =
       firstUserMessage && firstUserMessage.text
         ? firstUserMessage.text.trim().substring(0, 50) +
-          (firstUserMessage.text.length > 50 ? '...' : '')
+        (firstUserMessage.text.length > 50 ? '...' : '')
         : 'New Chat'
 
     const savedChat = await chatApi.saveChatHistory({
@@ -804,10 +688,8 @@ const saveCurrentChat = async () => {
     // Update current chat ID if it was a new chat
     if (!currentChatId.value) {
       currentChatId.value = savedChat.id
-      console.log('Generated new chat ID:', currentChatId.value)
     }
 
-    console.log('Saved chat history:', savedChat)
     await loadChatHistories()
   } catch (error) {
     console.error('Failed to save chat:', error)
@@ -908,7 +790,7 @@ const showModal = (type: string) => {
 const showForgotPasswordModal = () => {
   errorMessage.value = ''
   successMessage.value = ''
-  forgotPasswordForm.value = { username: '' }
+  resetForgotPasswordForm()
 
   // Close current modal and show forgot password modal
   if (bootstrapModal) {
@@ -931,9 +813,9 @@ const closeModal = () => {
   errorMessage.value = ''
   successMessage.value = ''
   formLoading.value = false
-  loginForm.value = { username: '', password: '' }
-  registerForm.value = { username: '', password: '', confirmPassword: '' }
-  forgotPasswordForm.value = { username: '' }
+  resetLoginForm()
+  resetRegisterForm()
+  resetForgotPasswordForm()
 
   // Reset password visibility toggles
   showLoginPassword.value = false
@@ -946,19 +828,14 @@ const closeModal = () => {
   }
 }
 
-const handleLogin = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    errorMessage.value = 'Please enter username and password'
-    return
-  }
-
+const handleLogin = handleLoginSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
 
     await userStore.login({
-      username: loginForm.value.username,
-      password: loginForm.value.password,
+      username: values.username,
+      password: values.password,
     })
 
     // Show success message
@@ -969,7 +846,10 @@ const handleLogin = async () => {
     await loadChatHistories()
   } catch (error: any) {
     console.error('Login error:', error)
-    if (error.response?.data?.detail) {
+    if (error.response?.status === 403) {
+      // Email verification required
+      errorMessage.value = error.response?.data?.detail || 'Please verify your email before logging in.'
+    } else if (error.response?.data?.detail) {
       errorMessage.value = error.response.data.detail
     } else if (error.response?.status === 401) {
       errorMessage.value = 'Invalid username or password'
@@ -979,39 +859,24 @@ const handleLogin = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 
-const handleRegister = async () => {
-  if (!registerForm.value.username || !registerForm.value.password) {
-    errorMessage.value = 'Please fill in all fields'
-    return
-  }
-
-  if (registerForm.value.password !== registerForm.value.confirmPassword) {
-    errorMessage.value = 'Passwords do not match!'
-    return
-  }
-
-  if (registerForm.value.password.length < 6) {
-    errorMessage.value = 'Password must be at least 6 characters long'
-    return
-  }
-
+const handleRegister = handleRegisterSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
     successMessage.value = ''
 
     const response = await userApi.register({
-      username: registerForm.value.username,
-      password: registerForm.value.password,
+      username: values.username,
+      password: values.password,
     })
 
     // Show success message - user needs to verify email
     successMessage.value = response.message
 
     // Clear form
-    registerForm.value = { username: '', password: '', confirmPassword: '' }
+    resetRegisterForm()
 
     // Close modal after 3 seconds
     setTimeout(() => {
@@ -1029,27 +894,22 @@ const handleRegister = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 
-const handleForgotPassword = async () => {
-  if (!forgotPasswordForm.value.username) {
-    errorMessage.value = 'Please enter your username/email'
-    return
-  }
-
+const handleForgotPassword = handleForgotPasswordSubmit(async (values) => {
   try {
     formLoading.value = true
     errorMessage.value = ''
     successMessage.value = ''
 
     const response = await userApi.forgotPassword({
-      username: forgotPasswordForm.value.username,
+      username: values.username,
     })
 
     successMessage.value = response.message
 
     // Clear form
-    forgotPasswordForm.value.username = ''
+    resetForgotPasswordForm()
   } catch (error: any) {
     console.error('Forgot password error:', error)
     if (error.response?.data?.detail) {
@@ -1060,7 +920,7 @@ const handleForgotPassword = async () => {
   } finally {
     formLoading.value = false
   }
-}
+})
 </script>
 
 <style scoped>
@@ -1171,6 +1031,7 @@ const handleForgotPassword = async () => {
   display: flex;
   justify-content: center;
   background: linear-gradient(to bottom, #f9fafb, #ffffff);
+  position: relative;
 }
 
 @media (min-width: 769px) {
@@ -1201,7 +1062,6 @@ const handleForgotPassword = async () => {
 
 .message-group {
   display: flex;
-  margin-bottom: 8px;
   animation: fadeIn 0.3s ease-out;
 }
 
@@ -1210,6 +1070,7 @@ const handleForgotPassword = async () => {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1229,6 +1090,7 @@ const handleForgotPassword = async () => {
   word-wrap: break-word;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: all 0.2s ease;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 768px) {
@@ -1254,6 +1116,92 @@ const handleForgotPassword = async () => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 16px 16px 4px 16px;
+}
+
+/* Thinking/Processing animation for bot messages */
+.message-bubble.thinking {
+  position: relative;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) padding-box,
+    linear-gradient(90deg, #667eea, #764ba2, #667eea) border-box;
+  background-size:
+    100%,
+    300% 100%;
+  animation:
+    thinkingBorder 2s linear infinite,
+    thinkingPulse 2s ease-in-out infinite;
+}
+
+@keyframes thinkingBorder {
+  0% {
+    background-position:
+      0% 0%,
+      0% 0%;
+  }
+
+  100% {
+    background-position:
+      0% 0%,
+      300% 0%;
+  }
+}
+
+@keyframes thinkingPulse {
+
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: scale(1);
+  }
+
+  50% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    transform: scale(1.01);
+  }
+}
+
+/* Thinking dots animation */
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 4px;
+}
+
+.thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #667eea;
+  animation: dotBounce 1.4s infinite ease-in-out;
+}
+
+.thinking-dots .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.thinking-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.thinking-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+
+  30% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
 }
 
 .typing-indicator {
@@ -1287,6 +1235,7 @@ const handleForgotPassword = async () => {
 }
 
 @keyframes bounce {
+
   0%,
   60%,
   100% {
@@ -1332,10 +1281,12 @@ const handleForgotPassword = async () => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.85;
   }
@@ -1413,6 +1364,15 @@ const handleForgotPassword = async () => {
   justify-content: center;
   flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.send-btn.stop-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.send-btn.stop-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 @media (max-width: 768px) {
@@ -1593,6 +1553,15 @@ const handleForgotPassword = async () => {
   font-family: inherit;
 }
 
+.form-control.is-invalid {
+  border-color: #dc2626;
+}
+
+.form-control.is-invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+}
+
 @media (max-width: 768px) {
   .form-control {
     padding: 12px 16px;
@@ -1674,6 +1643,21 @@ const handleForgotPassword = async () => {
   background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
   color: #16a34a;
   border-left: 4px solid #16a34a;
+}
+
+/* Validation Feedback */
+.invalid-feedback {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .invalid-feedback {
+    font-size: 12px;
+    margin-top: 4px;
+  }
 }
 
 /* Forgot Password Link */
@@ -1870,5 +1854,60 @@ const handleForgotPassword = async () => {
 
 .messages-container::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+}
+
+/* Scroll to Bottom Button */
+.scroll-to-bottom-btn {
+  position: fixed;
+  bottom: 120px;
+  right: 32px;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn {
+    bottom: 90px;
+    right: 20px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.scroll-to-bottom-btn:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.scroll-to-bottom-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.scroll-to-bottom-btn svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+  stroke-width: 2.5;
+}
+
+@media (max-width: 768px) {
+  .scroll-to-bottom-btn svg {
+    width: 20px;
+    height: 20px;
+  }
 }
 </style>
